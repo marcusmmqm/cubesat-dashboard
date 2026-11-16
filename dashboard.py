@@ -11,9 +11,11 @@ import tkinter as tk
 import serial
 from serial.tools import list_ports
 
+from attitude import Attitude, hand_end
 from can_parser import decode, parse_line, to_int16
 
 # ----------------------------------------------------------------- layout
+# Gráficos de linha (o painel da direita é o relógio de atitude, ClockPanel).
 # Cada gráfico: título, faixa do eixo y, se converte para int16 com sinal,
 # quantas entradas por linha na legenda, e as séries (can_id, campo, rótulo, cor).
 CHARTS = [
@@ -26,23 +28,6 @@ CHARTS = [
             (0x1F864, "MeasuredSpeed", "MeasuredSpeed", "#4fa3ff"),
             (0x1F864, "RefSpeed", "RefSpeed", "#f0883e"),
             (0x408A2, "Esforço PID", "Esforço PID", "#db61a2"),
-        ],
-    ),
-    dict(
-        title="Painéis solares e atitude",
-        y=(-400, 400, 50),
-        signed=False,
-        legend_cols=3,
-        series=[
-            (0x520B6, "v_solar_bottom", "v_solar_bottom", "#4fa3ff"),
-            (0x520B6, "v_solar_Yminus", "v_solar_Yminus", "#f0883e"),
-            (0x520B6, "v_solar_Y", "v_solar_Y", "#3fb950"),
-            (0x520B6, "v_solar_Xminus", "v_solar_Xminus", "#db61a2"),
-            (0x520B6, "v_solar_X", "v_solar_X", "#a371f7"),
-            (0x520B6, "v_solar_top", "v_solar_top", "#e3b341"),
-            (0x520B6, "v_solar_vout", "v_solar_vout", "#39c5cf"),
-            (0x408A2, "Azimute satélite", "Azimute satélite", "#ff7b72"),
-            (0x408A2, "Vel. angular Azim.", "Vel. angular Azim.", "#e6edf3"),
         ],
     ),
 ]
@@ -300,6 +285,107 @@ class XYChart(tk.Frame):
                 s["value_lbl"].config(text=txt)
 
 
+# ----------------------------------------------------------------- relógio
+class ClockPanel(tk.Frame):
+    """Relógio de atitude (CAN 408A2): ponteiro vermelho e curto = Setpoint_atitude
+    (alvo), branco e longo = posição atual (Azimute satélite). Mostrador de 30° em
+    30°, 360° no alto, sentido horário. Mesma interface do XYChart."""
+
+    CAN_ID = 0x408A2
+    ROWS = [("setpoint", "Setpoint_atitude", ERR), ("position", "Posição atual", TEXT),
+            ("velocity", "Velocidade angular", None), ("diff", "Diferença", None)]
+
+    def __init__(self, master, compact=False):
+        super().__init__(master, bg=PANEL)
+        self.att = Attitude()
+        self.compact = compact
+        legend = tk.Frame(self, bg=PANEL)
+        legend.pack(fill="x", pady=(8, 4))
+        legend.columnconfigure(1, weight=1)
+        self._labels = {}
+        for i, (key, label, color) in enumerate(self.ROWS):
+            tk.Frame(legend, bg=color or PANEL, width=14, height=4).grid(
+                row=i, column=0, padx=(0, 6))
+            tk.Label(legend, text=label, bg=PANEL, fg=MUTED, anchor="w",
+                     font=(FONT, 8 if compact else 9)).grid(row=i, column=1, sticky="w")
+            val = tk.Label(legend, text="—", bg=PANEL, fg=TEXT, anchor="e",
+                           font=(MONO, 9 if compact else 12, "bold"))
+            val.grid(row=i, column=2, sticky="e")
+            self._labels[key] = val
+        self._labels["stale"] = tk.Label(self, text="", bg=PANEL, fg=WARN, anchor="w",
+                                         font=(FONT, 8 if compact else 9))
+        self._labels["stale"].pack(fill="x")
+        self._shown = {}
+
+        self.canvas = tk.Canvas(self, bg=TILE, highlightthickness=1,
+                                highlightbackground=BORDER)
+        self.canvas.pack(fill="both", expand=True)
+        self._geom = None                    # (cx, cy, raio) do mostrador
+        self._target = self._current = None  # ids dos ponteiros
+        self.canvas.bind("<Configure>", self._layout)
+
+    def _layout(self, event=None):
+        """Desenha o mostrador (fixo) e cria os ponteiros. Só quando muda de tamanho."""
+        c = self.canvas
+        w, h = c.winfo_width(), c.winfo_height()
+        c.delete("all")
+        r = min(w, h) / 2 - 8
+        if r < 30:
+            self._geom = None
+            return
+        cx, cy = w / 2, h / 2
+        self._geom = (cx, cy, r)
+        c.create_oval(cx - r, cy - r, cx + r, cy + r, outline=BORDER, width=2)
+        font = (MONO, 8 if self.compact else 10)
+        for deg in range(30, 361, 30):
+            x0, y0 = hand_end(cx, cy, r - 8, deg)
+            x1, y1 = hand_end(cx, cy, r, deg)
+            c.create_line(x0, y0, x1, y1, fill=MUTED, width=2)
+            tx, ty = hand_end(cx, cy, r - (22 if self.compact else 28), deg)
+            c.create_text(tx, ty, text=f"{deg}°", fill=MUTED, font=font)
+        for deg in range(0, 360, 10):          # marcas menores de 10° em 10°
+            if deg % 30:
+                x0, y0 = hand_end(cx, cy, r - 4, deg)
+                x1, y1 = hand_end(cx, cy, r, deg)
+                c.create_line(x0, y0, x1, y1, fill=BORDER)
+        # vermelho (alvo) por baixo, branco (atual) por cima
+        self._target = c.create_line(cx, cy, cx, cy, fill=ERR, width=5,
+                                     capstyle="round", state="hidden")
+        self._current = c.create_line(cx, cy, cx, cy, fill=TEXT, width=3,
+                                      capstyle="round", state="hidden")
+        c.create_oval(cx - 5, cy - 5, cx + 5, cy + 5, fill=TEXT, outline="")
+
+    def clear(self):
+        self.att.clear()
+
+    def can_ids(self):
+        return {self.CAN_ID}
+
+    def push(self, can_id, t, values):
+        if can_id == self.CAN_ID:
+            self.att.update(t, values)
+
+    def redraw(self, now):
+        for key, txt in self.att.legend(now).items():
+            txt = txt or ""
+            if self._shown.get(key) != txt:          # só mexe no rótulo se mudou
+                self._shown[key] = txt
+                self._labels[key].config(text=txt)
+        if self._geom is None:
+            return
+        cx, cy, r = self._geom
+        parado = self.att.is_stale(now)
+        for item, angle, length, color in (
+                (self._target, self.att.last_valid_setpoint, 0.55 * r, ERR),
+                (self._current, self.att.last_valid_position, 0.85 * r, TEXT)):
+            if angle is None:
+                self.canvas.itemconfigure(item, state="hidden")
+                continue
+            self.canvas.coords(item, cx, cy, *hand_end(cx, cy, length, angle))
+            self.canvas.itemconfigure(item, state="normal",
+                                      fill=MUTED if parado else color)
+
+
 # ----------------------------------------------------------------- app
 class App:
     def __init__(self, root, port, baud, window_s, fullscreen=False, tcp=None):
@@ -331,19 +417,27 @@ class App:
         body.pack(fill="both", expand=True, padx=12, pady=(4, 12))
         body.rowconfigure(0, weight=1)
 
-        self.charts = []
-        for col, cfg in enumerate(CHARTS):
-            p = tk.Frame(body, bg=PANEL, padx=14, pady=10,
-                         highlightthickness=1, highlightbackground=BORDER)
-            p.grid(row=0, column=col, sticky="nsew", padx=4)
-            body.columnconfigure(col, weight=1, uniform="p")
+        # painéis: (título, subtítulo, função que cria o conteúdo)
+        paineis = []
+        for cfg in CHARTS:
             lo, hi, _ = cfg["y"]
             sub = f"últimos {window_s} s · eixo y fixo de {lo} a {hi}"
             if cfg["signed"]:
                 sub += " · int16 com sinal"
+            paineis.append((cfg["title"], sub,
+                            lambda p, cfg=cfg: XYChart(p, cfg, window_s, compact)))
+        paineis.append(("Atitude", "vermelho = Setpoint_atitude · branco = posição atual (408A2)",
+                        lambda p: ClockPanel(p, compact)))
+
+        self.charts = []
+        for col, (title, sub, criar) in enumerate(paineis):
+            p = tk.Frame(body, bg=PANEL, padx=14, pady=10,
+                         highlightthickness=1, highlightbackground=BORDER)
+            p.grid(row=0, column=col, sticky="nsew", padx=4)
+            body.columnconfigure(col, weight=1, uniform="p")
             head = tk.Frame(p, bg=PANEL)
             head.pack(fill="x")
-            tk.Label(head, text=cfg["title"], bg=PANEL, fg=ACCENT,
+            tk.Label(head, text=title, bg=PANEL, fg=ACCENT,
                      font=(FONT, 13, "bold"), anchor="w").pack(side="left")
             btn = tk.Button(head, text="Limpar", bg=TILE, fg=TEXT,
                             activebackground=BORDER, activeforeground=TEXT,
@@ -353,7 +447,7 @@ class App:
             btn.pack(side="right")
             tk.Label(p, text=sub, bg=PANEL, fg=MUTED, font=(FONT, 8),
                      anchor="w").pack(fill="x")
-            chart = XYChart(p, cfg, window_s, compact)
+            chart = criar(p)
             btn.config(command=chart.clear)
             chart.pack(fill="both", expand=True)
             self.charts.append(chart)

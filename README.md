@@ -12,9 +12,11 @@ real, dois painéis lado a lado:
     pelo satélite depois do comando LIGA ATITUDE);
   - ponteiro **branco, longo** = posição atual (Azimute satélite);
   - mostrador de 30° em 30°, 360° no alto, sentido horário;
-  - legenda: setpoint, posição atual (0 a 359°), velocidade angular (°/s, com
-    sinal) e diferença até o alvo pelo caminho mais curto (-180 a +180°);
-  - ângulo fora de 0–359 aparece como "inválido (N)" e não move o ponteiro;
+  - legenda: setpoint e posição atual de 0 a 359° (a posição chega de -180 a
+    +180° e é convertida: -51 → 309°), velocidade angular (°/s, com sinal) e
+    diferença até o alvo pelo caminho mais curto (-180 a +180°);
+  - setpoint fora de 0–359 ou posição fora de -180–+180 aparece como
+    "inválido (N)" e não move o ponteiro;
   - sem `408A2` por mais de 5 s: "sem dados há X s" e ponteiros em cinza.
 
 Cada painel tem um botão **Limpar**.
@@ -89,7 +91,7 @@ Decodificação usada (nomes dos campos conforme `mapaCAN2.png`):
 | ID | Campos | Formato |
 |---|---|---|
 | `1F864` | MeasuredSpeed, RefSpeed, Measured Current, RefTorque | 4 × int16 big-endian com sinal |
-| `408A2` | Setpoint_atitude, Esforço PID, Azimute satélite, Vel. angular Azim. | 4 × 16 bits big-endian: Setpoint_atitude e Azimute sem sinal (0–359°); Esforço PID e Vel. angular (°/s) com sinal |
+| `408A2` | Setpoint_atitude, Esforço PID, Azimute satélite, Vel. angular Azim. | 4 × 16 bits big-endian: Setpoint_atitude sem sinal (0–359°); Esforço PID, Azimute (-180 a +180°) e Vel. angular (°/s) com sinal |
 | `520B6` | v_solar_bottom, Yminus, Y, Xminus, X, top, vout, STATUS | 8 × uint8 |
 
 ![Mapa CAN](mapaCAN2.png)

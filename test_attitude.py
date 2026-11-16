@@ -1,6 +1,6 @@
 import unittest
 
-from attitude import Attitude, angle_diff, hand_end, valid_angle
+from attitude import Attitude, angle_diff, hand_end, position_deg, valid_angle
 
 
 class AngleTest(unittest.TestCase):
@@ -9,6 +9,14 @@ class AngleTest(unittest.TestCase):
         self.assertTrue(valid_angle(359))
         self.assertFalse(valid_angle(360))
         self.assertFalse(valid_angle(65485))
+
+    def test_posicao_valida(self):           # posição atual: com sinal, -180 a +180
+        self.assertEqual(position_deg(-51), 309)
+        self.assertEqual(position_deg(-180), 180)
+        self.assertEqual(position_deg(180), 180)
+        self.assertEqual(position_deg(0), 0)
+        self.assertIsNone(position_deg(181))
+        self.assertIsNone(position_deg(-32768))
 
     def test_diff(self):
         self.assertEqual(angle_diff(350, 10), -20)   # caminho curto, não +340
@@ -24,7 +32,8 @@ class AngleTest(unittest.TestCase):
 
 
 class AttitudeTest(unittest.TestCase):
-    V = {"Setpoint_atitude": 15, "Esforço PID": 0, "Azimute satélite": 309,
+    # posição chega com sinal (-180 a +180): -51 = 309°
+    V = {"Setpoint_atitude": 15, "Esforço PID": 0, "Azimute satélite": -51,
          "Vel. angular Azim.": 2}
 
     def test_sem_dados(self):
@@ -39,12 +48,20 @@ class AttitudeTest(unittest.TestCase):
                                            "velocity": "+2 °/s", "diff": "+66°",
                                            "stale": None})
 
+    def test_posicao_negativa(self):
+        a = Attitude()
+        a.update(100.0, dict(self.V, **{"Azimute satélite": -51}))
+        leg = a.legend(100.0)
+        self.assertEqual(leg["position"], "309°")
+        self.assertEqual(leg["diff"], "+66°")
+        self.assertEqual(a.last_valid_position, 309)
+
     def test_invalido_mantem_ultimo_valido(self):
         a = Attitude()
         a.update(100.0, self.V)
-        a.update(101.0, dict(self.V, **{"Azimute satélite": 65485}))
+        a.update(101.0, dict(self.V, **{"Azimute satélite": -32768}))
         leg = a.legend(101.0)
-        self.assertEqual(leg["position"], "inválido (65485)")
+        self.assertEqual(leg["position"], "inválido (-32768)")
         self.assertEqual(leg["diff"], "—")
         self.assertEqual(a.last_valid_position, 309)
 

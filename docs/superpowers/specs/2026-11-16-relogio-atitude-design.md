@@ -19,8 +19,9 @@ pedido e se fica parado ou oscila em torno dele. O painel da direita
   - Diferença — quanto falta do atual ao alvo pelo caminho mais curto, -180 a +180°
 - **Dado parado:** se o `408A2` não chegar por mais de 5 s, a legenda mostra
   "sem dados há X s" e os ponteiros ficam acinzentados.
-- **Valor inválido:** azimute ou setpoint fora de 0–359 (ex.: 65485) não move o
-  ponteiro; a legenda mostra "inválido (65485)".
+- **Valor inválido:** setpoint fora de 0–359 ou posição fora de -180–+180 não
+  move o ponteiro; a legenda mostra "inválido (N)".
+- Correção posterior: a posição chega com sinal (65485 do satélite real = -51°).
 
 Sem rastro, gráfico de desvio ou contador de voltas (decidido: a oscilação se vê
 no movimento do ponteiro).
@@ -33,7 +34,7 @@ Tudo vem do CAN `408A2`, pelo LoRa, 4 campos de 16 bits big-endian:
 |---|---|---|
 | 0 | Setpoint_atitude (era "RefSpeed Roda Reação") | sem sinal, 0–359° |
 | 1 | Esforço PID | com sinal (como hoje) |
-| 2 | Azimute satelital | sem sinal, 0–359° |
+| 2 | Azimute satelital (posição atual) | **com sinal**, -180 a +180°; mostrado de 0 a 359° (-51 → 309°) |
 | 3 | Vel. angular Azim. | com sinal, °/s (negativa = anti-horário) |
 
 O Setpoint_atitude é o valor que o satélite devolve depois de receber o comando

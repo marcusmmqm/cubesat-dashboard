@@ -44,7 +44,7 @@ class ClockPanelTest(unittest.TestCase):
 
     def test_sem_angulo_valido_ponteiro_oculto(self):
         p, c = self.p, self.p.canvas
-        p.push(0x408A2, 100.0, dict(V, **{"Azimute satélite": 65485}))
+        p.push(0x408A2, 100.0, dict(V, **{"Azimute satélite": -32768}))
         p.redraw(100.5)
         self.root.update()
         self.assertEqual(c.itemcget(p._current, "state"), "hidden")

@@ -47,7 +47,7 @@ class DecodeTest(unittest.TestCase):
         v = decode(0x408A2, bytes.fromhex("012C0002FFCDFFFD"))
         self.assertEqual(v["Setpoint_atitude"], 300)        # uint16
         self.assertEqual(v["Esforço PID"], 2)
-        self.assertEqual(v["Azimute satélite"], 65485)      # uint16: inválido, mas cru
+        self.assertEqual(v["Azimute satélite"], -51)        # int16: FFCD = -51°
         self.assertEqual(v["Vel. angular Azim."], -3)       # int16
 
     def test_408a2_pid_negativo(self):

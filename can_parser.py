@@ -63,9 +63,10 @@ DECODERS = {
     ),
     0x408A2: (
         ["Setpoint_atitude", "Esforço PID", "Azimute satélite", "Vel. angular Azim."],
-        # big-endian; ângulos (setpoint e azimute, 0 a 359°) sem sinal,
-        # Esforço PID e velocidade angular (°/s) com sinal
-        lambda d: [v if i in (0, 2) else to_int16(v) for i, v in enumerate(_u16_be(d, 4))],
+        # big-endian; Setpoint_atitude sem sinal (0 a 359°); Esforço PID,
+        # Azimute satélite (posição atual, -180 a +180°) e velocidade angular
+        # (°/s) com sinal
+        lambda d: [v if i == 0 else to_int16(v) for i, v in enumerate(_u16_be(d, 4))],
     ),
     0x520B6: (
         ["v_solar_bottom", "v_solar_Yminus", "v_solar_Y", "v_solar_Xminus",

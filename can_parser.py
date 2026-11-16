@@ -62,10 +62,10 @@ DECODERS = {
         lambda d: _s16_be(d, 4),
     ),
     0x408A2: (
-        ["RefSpeed Roda Reação", "Esforço PID",   # nomes de mapaCAN2.png
-         "Azimute satélite", "Vel. angular Azim."],
-        # int16 big-endian com sinal
-        lambda d: _s16_be(d, 4),
+        ["Setpoint_atitude", "Esforço PID", "Azimute satélite", "Vel. angular Azim."],
+        # big-endian; ângulos (setpoint e azimute, 0 a 359°) sem sinal,
+        # Esforço PID e velocidade angular (°/s) com sinal
+        lambda d: [v if i in (0, 2) else to_int16(v) for i, v in enumerate(_u16_be(d, 4))],
     ),
     0x520B6: (
         ["v_solar_bottom", "v_solar_Yminus", "v_solar_Y", "v_solar_Xminus",

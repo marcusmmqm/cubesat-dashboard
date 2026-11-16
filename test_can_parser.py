@@ -44,11 +44,14 @@ class DecodeTest(unittest.TestCase):
         self.assertEqual(v["RefTorque"], 0)
 
     def test_408a2(self):
-        v = decode(0x408A2, bytes.fromhex("00010002FF910004"))
-        self.assertEqual(v["RefSpeed Roda Reação"], 1)
-        self.assertEqual(v["Esforço PID"], 2)  # mapaCAN2.png
-        self.assertEqual(v["Azimute satélite"], -111)  # FF91 com sinal
-        self.assertEqual(v["Vel. angular Azim."], 4)
+        v = decode(0x408A2, bytes.fromhex("012C0002FFCDFFFD"))
+        self.assertEqual(v["Setpoint_atitude"], 300)        # uint16
+        self.assertEqual(v["Esforço PID"], 2)
+        self.assertEqual(v["Azimute satélite"], 65485)      # uint16: inválido, mas cru
+        self.assertEqual(v["Vel. angular Azim."], -3)       # int16
+
+    def test_408a2_pid_negativo(self):
+        self.assertEqual(decode(0x408A2, bytes.fromhex("0000FF8800000000"))["Esforço PID"], -120)
 
     def test_520b6_um_byte_por_campo(self):
         v = decode(0x520B6, bytes.fromhex("170A050301010000"))

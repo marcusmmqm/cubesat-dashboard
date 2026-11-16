@@ -25,7 +25,6 @@ CHARTS = [
         series=[
             (0x1F864, "MeasuredSpeed", "MeasuredSpeed", "#4fa3ff"),
             (0x1F864, "RefSpeed", "RefSpeed", "#f0883e"),
-            (0x408A2, "RefSpeed Roda Reação", "RefSpeed Roda Reação", "#3fb950"),
             (0x408A2, "Esforço PID", "Esforço PID", "#db61a2"),
         ],
     ),

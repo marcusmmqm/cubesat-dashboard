@@ -1,0 +1,4 @@
+XKB_DEFAULT_MODEL=pc105
+XKB_DEFAULT_LAYOUT=br
+# mesma opção que a sessão oficial do Raspberry usa (/etc/xdg/labwc/environment)
+WLR_DRM_FORCE_LIBLIFTOFF=1

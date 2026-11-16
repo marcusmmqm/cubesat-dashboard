@@ -1,0 +1,10 @@
+# Programas do quiosque CubeSat. Cada um é reaberto sozinho se fechar ou cair.
+K="$HOME/cubesat-kiosk"
+# se o labwc foi reiniciado, os vigias da sessão anterior ainda estão vivos
+# (ficam no grupo da sessão de login): encerra eles e os programas deles
+pkill -u "$(id -u)" -f "$K/manter.sh" && sleep 1
+"$K/manter.sh" barra     python3 "$K/barra.py" &
+"$K/manter.sh" dashboard "$K/abrir_dashboard.sh" &
+"$K/manter.sh" nodered   "$K/abrir_nodered.sh" &
+"$K/manter.sh" teclado   squeekboard &
+"$K/manter.sh" vigia     python3 "$K/vigia_tela.py" &

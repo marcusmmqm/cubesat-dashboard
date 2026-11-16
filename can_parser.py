@@ -42,6 +42,13 @@ def _s16_le(data, n):
             for i in range(n)]
 
 
+def _s16_be(data, n):
+    """n campos int16 big-endian com sinal."""
+    data = data.ljust(2 * n, b"\x00")
+    return [int.from_bytes(data[2 * i:2 * i + 2], "big", signed=True)
+            for i in range(n)]
+
+
 def _u8(data, n):
     data = data.ljust(n, b"\x00")
     return list(data[:n])
@@ -51,14 +58,15 @@ def _u8(data, n):
 DECODERS = {
     0x1F864: (
         ["MeasuredSpeed", "RefSpeed", "Measured Current", "RefTorque"],
-        # little-endian com sinal: roda parada dá ±122 (em big-endian daria
-        # 31232 / -30977, que era o que o Node-RED mostrava).
-        lambda d: _s16_le(d, 4),
+        # int16 big-endian com sinal
+        lambda d: _s16_be(d, 4),
     ),
     0x408A2: (
-        ["RefSpeed Roda Reação", "Esforço PID",   # nomes de mapaCAN2.png
-         "Azimute satélite", "Vel. angular Azim."],
-        lambda d: _u16_be(d, 4),
+        ["Setpoint_atitude", "Esforço PID", "Azimute satélite", "Vel. angular Azim."],
+        # big-endian; Setpoint_atitude sem sinal (0 a 359°); Esforço PID,
+        # Azimute satélite (posição atual, -180 a +180°) e velocidade angular
+        # (°/s) com sinal
+        lambda d: [v if i == 0 else to_int16(v) for i, v in enumerate(_u16_be(d, 4))],
     ),
     0x520B6: (
         ["v_solar_bottom", "v_solar_Yminus", "v_solar_Y", "v_solar_Xminus",

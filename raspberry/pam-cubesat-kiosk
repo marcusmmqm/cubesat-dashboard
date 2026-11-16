@@ -1,0 +1,5 @@
+# sessão local do quiosque CubeSat (dá ao labwc acesso à tela e ao toque)
+auth     required pam_unix.so nullok
+account  required pam_unix.so
+session  required pam_unix.so
+session  required pam_systemd.so

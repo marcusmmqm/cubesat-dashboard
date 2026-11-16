@@ -1,15 +1,23 @@
 # CubeSat · Dashboard de telemetria LoRa
 
 Dashboard em Python que lê o receptor LoRa pela porta serial e mostra, em tempo
-real, dois gráficos lado a lado:
+real, dois painéis lado a lado:
 
-| Gráfico | Séries | Eixo Y |
-|---|---|---|
-| **Velocidades da roda de reação** (esquerda) | MeasuredSpeed, RefSpeed (`1F864`) · RefSpeed Roda Reação, Esforço PID (`408A2`) | fixo, -3000 a +3000 (int16 com sinal) |
-| **Painéis solares e atitude** (direita) | v_solar_bottom, Yminus, Y, Xminus, X, top, vout (`520B6`, sem STATUS) · Azimute satélite, Vel. angular Azim. (`408A2`) | fixo, -400 a +400 |
+- **Velocidades da roda de reação** (esquerda): gráfico dos últimos 60 s de
+  MeasuredSpeed, RefSpeed (`1F864`) e Esforço PID (`408A2`), eixo fixo de -3000
+  a +3000. A legenda mostra o valor mais recente de cada série.
+- **Atitude** (direita): relógio para acompanhar o posicionamento angular do
+  CubeSat, com os dados do `408A2`:
+  - ponteiro **vermelho, curto** = Setpoint_atitude (ângulo pedido, devolvido
+    pelo satélite depois do comando LIGA ATITUDE);
+  - ponteiro **branco, longo** = posição atual (Azimute satélite);
+  - mostrador de 30° em 30°, 360° no alto, sentido horário;
+  - legenda: setpoint, posição atual (0 a 359°), velocidade angular (°/s, com
+    sinal) e diferença até o alvo pelo caminho mais curto (-180 a +180°);
+  - ângulo fora de 0–359 aparece como "inválido (N)" e não move o ponteiro;
+  - sem `408A2` por mais de 5 s: "sem dados há X s" e ponteiros em cinza.
 
-Cada gráfico mostra os últimos 60 s e tem um botão **Limpar**. A legenda mostra o
-valor mais recente de cada série.
+Cada painel tem um botão **Limpar**.
 
 ## Requisitos
 
@@ -81,7 +89,7 @@ Decodificação usada (nomes dos campos conforme `mapaCAN2.png`):
 | ID | Campos | Formato |
 |---|---|---|
 | `1F864` | MeasuredSpeed, RefSpeed, Measured Current, RefTorque | 4 × int16 big-endian com sinal |
-| `408A2` | RefSpeed Roda Reação, Esforço PID, Azimute satélite, Vel. angular Azim. | 4 × int16 big-endian com sinal |
+| `408A2` | Setpoint_atitude, Esforço PID, Azimute satélite, Vel. angular Azim. | 4 × 16 bits big-endian: Setpoint_atitude e Azimute sem sinal (0–359°); Esforço PID e Vel. angular (°/s) com sinal |
 | `520B6` | v_solar_bottom, Yminus, Y, Xminus, X, top, vout, STATUS | 8 × uint8 |
 
 ![Mapa CAN](mapaCAN2.png)
@@ -106,7 +114,6 @@ python3 -m unittest
   os picos nos gráficos. A causa provável é um buffer compartilhado no firmware
   que monta os pacotes LoRa; a correção é um buffer por ID ou copiar ID + 8 bytes
   de forma atômica. `408A2` e `4F8A0` chegam limpos.
-- **Ordem dos bytes**: `1F864` e `408A2` são lidos como int16 big-endian com
-  sinal. Com o firmware antigo o `1F864` chegava em little-endian (roda parada:
+- **Ordem dos bytes**: `1F864` é lido como int16 big-endian com sinal. Com o firmware antigo o `1F864` chegava em little-endian (roda parada:
   `7A00` → +122); se aparecerem valores como 31232 com a roda parada, a ordem
   voltou a ser little-endian.

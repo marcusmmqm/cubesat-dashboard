@@ -21,6 +21,17 @@ real, dois painéis lado a lado:
 
 Cada painel tem um botão **Limpar**.
 
+## Raspberry e Node-RED
+
+Na estação de solo com Raspberry Pi (tela de 800x480), o dashboard roda num
+quiosque junto com o painel do Node-RED, que cuida do módulo LoRa e envia os
+comandos ao CubeSat:
+
+- [`raspberry/`](raspberry/README.md): quiosque (barra de troca de telas,
+  serviço, instalação) e uma simulação do CubeSat para testar sem o receptor;
+- [`node-red/`](node-red/README.md): gerador do fluxo do Node-RED e o protocolo
+  dos comandos enviados pela serial.
+
 ## Requisitos
 
 - Python 3.10+ com tkinter (já vem no instalador do Windows; no Ubuntu: `sudo apt install python3-tk`)

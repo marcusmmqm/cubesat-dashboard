@@ -3,3 +3,11 @@ __pycache__/
 build/
 dist/
 *.spec
+
+# Node-RED: fluxos originais fora do repositório público
+# (fluxoCubesatNODE.txt tem a chave do Supabase; codec1.txt é de outro projeto)
+node-red/fluxoCubesatNODE.txt
+node-red/codec1.txt
+
+# rascunho de execução dos planos (superpowers)
+.superpowers/

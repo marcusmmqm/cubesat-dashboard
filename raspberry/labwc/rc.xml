@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!-- labwc do quiosque CubeSat (usado com labwc -C ~/cubesat-kiosk/labwc) -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <!-- tela de toque oficial (DSI), mesmo ajuste que o Raspberry já tinha -->
+  <touch deviceName="11-0038 generic ft5x06 (79)" mapToOutput="DSI-2" mouseEmulation="yes"/>
+
+  <!-- faixa do topo reservada para a barra (tem que bater com ALTURA em barra.py) -->
+  <margin top="44"/>
+
+  <windowRules>
+    <!-- nenhuma janela com barra de título -->
+    <windowRule identifier="*" serverDecoration="no"/>
+
+    <windowRule identifier="cubesat-barra" fixedPosition="yes" skipWindowSwitcher="yes">
+      <action name="MoveTo" x="0" y="0"/>
+    </windowRule>
+
+    <!-- dashboard Python (Tk): ocupa todo o espaço abaixo da barra -->
+    <windowRule title="*Telemetria LoRa*" ignoreConfigureRequest="yes">
+      <action name="Maximize"/>
+    </windowRule>
+
+    <!-- painel do Node-RED no Chromium -->
+    <windowRule identifier="chrom*">
+      <action name="Maximize"/>
+    </windowRule>
+  </windowRules>
+</openbox_config>

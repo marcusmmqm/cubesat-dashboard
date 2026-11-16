@@ -1,0 +1,1167 @@
+[
+ {
+  "id": "9b6df1cc.293a",
+  "type": "tab",
+  "label": "CubeSat",
+  "disabled": false,
+  "info": ""
+ },
+ {
+  "id": "cdf649de.0801a8",
+  "type": "ui_button",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 4,
+  "width": "4",
+  "height": "1",
+  "passthru": false,
+  "label": "DESLIGA ATITUDE",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "icon": "",
+  "payload": "",
+  "payloadType": "str",
+  "topic": "",
+  "topicType": "str",
+  "x": 250,
+  "y": 640,
+  "wires": [
+   [
+    "7e54d339.249b9c"
+   ]
+  ]
+ },
+ {
+  "id": "cdfa4ebd.ddb6f8",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "Contagem Regressiva",
+  "func": "//call constructor Date() and pass to now\nvar now = new Date();\n//time_now receive current time\nvar time_now = now.getTime();\n\nif (typeof last_broker_time === 'undefined'){\n    last_broker_time = time_now;\n}\n\nif (msg.payload){\n    last_broker_time = time_now;\n    } \n\n//1. diference between times\n//2. divide per 1000 to parse miliseconds to second\n//3. divide per 60 to parse second to minute\n//4. .toFixed(0) return an int value\n//5. parseInt(\"string\",10) --> returns a decimal value based on own string value\nvar difference_between_times = parseInt(((time_now - last_broker_time)/1000).toFixed(0),10);\n\n//pass to msg.payload the desire velue to show on gauge in dashboard\nmsg.payload = difference_between_times; \nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 760,
+  "y": 400,
+  "wires": [
+   [
+    "d739652f.c3801"
+   ]
+  ]
+ },
+ {
+  "id": "8d0e5776.87464",
+  "type": "inject",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "topic": "",
+  "payload": "msg.time_sample",
+  "payloadType": "global",
+  "repeat": "1",
+  "crontab": "",
+  "once": false,
+  "x": 470,
+  "y": 400,
+  "wires": [
+   [
+    "cdfa4ebd.ddb6f8"
+   ]
+  ]
+ },
+ {
+  "id": "d739652f.c3801",
+  "type": "ui_gauge",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 2,
+  "width": "3",
+  "height": "3",
+  "gtype": "donut",
+  "title": "atualizado a",
+  "label": "sec",
+  "format": "{{value}}",
+  "min": "0",
+  "max": "430",
+  "colors": [
+   "#008000",
+   "#ffff00",
+   "#ff0000"
+  ],
+  "seg1": "",
+  "seg2": "",
+  "x": 970,
+  "y": 400,
+  "wires": []
+ },
+ {
+  "id": "331818d3.2af73",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "Contagem Regressiva",
+  "func": "//call constructor Date() and pass to now\nvar now = new Date();\n//time_now receive current time\nvar time_now = now.getTime();\n\nif (typeof last_broker_time === 'undefined'){\n    last_broker_time = time_now;\n}\n\nif (msg.payload){\n    last_broker_time = time_now;\n    } \n\n//1. diference between times\n//2. divide per 1000 to parse miliseconds to second\n//3. divide per 60 to parse second to minute\n//4. .toFixed(0) return an int value\n//5. parseInt(\"string\",10) --> returns a decimal value based on own string value\nvar difference_between_times = parseInt(((time_now - last_broker_time)/1000).toFixed(0),10);\n\n//pass to msg.payload the desire velue to show on gauge in dashboard\nmsg.payload = difference_between_times; \nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 760,
+  "y": 440,
+  "wires": [
+   [
+    "333ef04b.46d93"
+   ]
+  ]
+ },
+ {
+  "id": "251bef83.50a4d",
+  "type": "inject",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "topic": "",
+  "payload": "msg.time_sample",
+  "payloadType": "global",
+  "repeat": "1",
+  "crontab": "",
+  "once": false,
+  "x": 470,
+  "y": 440,
+  "wires": [
+   [
+    "331818d3.2af73"
+   ]
+  ]
+ },
+ {
+  "id": "333ef04b.46d93",
+  "type": "ui_gauge",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 1,
+  "width": "3",
+  "height": "3",
+  "gtype": "donut",
+  "title": "ultimo envio",
+  "label": "sec",
+  "format": "{{value}}",
+  "min": "0",
+  "max": "430",
+  "colors": [
+   "#008000",
+   "#ffff00",
+   "#ff0000"
+  ],
+  "seg1": "",
+  "seg2": "",
+  "x": 970,
+  "y": 440,
+  "wires": []
+ },
+ {
+  "id": "886a933d.16a54",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "msg_01",
+  "func": "msg.payload='{\"devEui\": \"0005168000136ee4\",\"confirmed\": true,\"fPort\": 1,\"data\": \"AAE=\"}';\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 480,
+  "y": 520,
+  "wires": [
+   [
+    "d7caa0be.3c3bf8"
+   ]
+  ]
+ },
+ {
+  "id": "d7ea18d9.a4623",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "msg_02",
+  "func": "msg.payload='{\"devEui\": \"0005168000136ee4\",\"confirmed\": true,\"fPort\": 1,\"data\": \"AAI=\"}';\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 480,
+  "y": 560,
+  "wires": [
+   [
+    "d7caa0be.3c3bf8"
+   ]
+  ]
+ },
+ {
+  "id": "35efc2d5.a8ddc6",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "msg_03",
+  "func": "msg.payload='{\"devEui\": \"0005168000136ee4\",\"confirmed\": true,\"fPort\": 1,\"data\": \"AAM=\"}';\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 480,
+  "y": 600,
+  "wires": [
+   [
+    "d7caa0be.3c3bf8"
+   ]
+  ]
+ },
+ {
+  "id": "7e54d339.249b9c",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "msg_04",
+  "func": "msg.payload='{\"devEui\": \"0005168000136ee4\",\"confirmed\": true,\"fPort\": 1,\"data\": \"AAQ=\"}';\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 480,
+  "y": 640,
+  "wires": [
+   [
+    "d7caa0be.3c3bf8"
+   ]
+  ]
+ },
+ {
+  "id": "de76fb2b.bd271",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "msg_05",
+  "func": "if (msg.topic == \"azimute_set\")\n{\n    global.set (\"GlobalCubesat.azimute_set\", msg.payload);\n    return;\n}\n\nmsg.azimute = global.get (\"GlobalCubesat.azimute_set\");\n msg.azimute_high = (Math.floor(msg.azimute/256)).toString(16).padStart(2, '0');\n msg.azimute_low = (msg.azimute%256).toString(16).padStart(2, '0');\n\nvar data64 = Buffer.from(\"0005\" + msg.azimute_high + msg.azimute_low, 'hex').toString('base64');\n\nmsg.payload='{\"devEui\": \"0005168000136ee4\",\"confirmed\": true,\"fPort\": 1,\"data\": \"' + data64 + '\"}';\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 480,
+  "y": 680,
+  "wires": [
+   [
+    "d7caa0be.3c3bf8"
+   ]
+  ]
+ },
+ {
+  "id": "24ed9d0a.7adcda",
+  "type": "ui_button",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 5,
+  "width": "4",
+  "height": "1",
+  "passthru": false,
+  "label": "ACIONA DEPLOYER",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "icon": "",
+  "payload": "",
+  "payloadType": "str",
+  "topic": "",
+  "topicType": "str",
+  "x": 280,
+  "y": 520,
+  "wires": [
+   [
+    "886a933d.16a54"
+   ]
+  ]
+ },
+ {
+  "id": "53fc5b53.7a840c",
+  "type": "ui_button",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 6,
+  "width": "4",
+  "height": "1",
+  "passthru": false,
+  "label": "DESLIGA DEPLOYER",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "icon": "",
+  "payload": "",
+  "payloadType": "str",
+  "topic": "",
+  "x": 280,
+  "y": 560,
+  "wires": [
+   [
+    "d7ea18d9.a4623"
+   ]
+  ]
+ },
+ {
+  "id": "4fbf2272.0e0044",
+  "type": "ui_button",
+  "z": "9b6df1cc.293a",
+  "d": true,
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 7,
+  "width": 10,
+  "height": 2,
+  "passthru": false,
+  "label": "ENVIA3",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "icon": "",
+  "payload": "",
+  "payloadType": "str",
+  "topic": "",
+  "x": 240,
+  "y": 600,
+  "wires": [
+   [
+    "35efc2d5.a8ddc6"
+   ]
+  ]
+ },
+ {
+  "id": "4a6248ac.f81d3",
+  "type": "ui_button",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 3,
+  "width": "4",
+  "height": "1",
+  "passthru": false,
+  "label": "LIGA ATITUDE",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "icon": "",
+  "payload": "",
+  "payloadType": "str",
+  "topic": "",
+  "x": 260,
+  "y": 680,
+  "wires": [
+   [
+    "de76fb2b.bd271"
+   ]
+  ]
+ },
+ {
+  "id": "bc2c8974.279618",
+  "type": "mqtt out",
+  "z": "9b6df1cc.293a",
+  "name": "networkerserver ChirpStack",
+  "topic": "application/815dcf59-4f43-45c7-9b0a-e264db48232d/device/0005168000136ee4/command/down",
+  "qos": "0",
+  "retain": "false",
+  "broker": "36609609.281dea",
+  "x": 1000,
+  "y": 680,
+  "wires": [],
+  "d": true
+ },
+ {
+  "id": "333ad9ea.bdc886",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "storage",
+  "func": "\n// Recupera a lista existente do contexto do nó (ou cria uma nova se estiver vazia)\nlet lista = context.get('minhaLista') || [];\n\nmsg_anterior = global.get(\"msg_anterior_cubesat\");\n//msg_anterior = msg;\nif ( msg.decodedData.canId_1)\n{\n    msg_anterior.decodedData.canId_1 = msg.decodedData.canId_1;\n}\nif( msg.decodedData.canId_2)\n{\n    msg_anterior.decodedData.canId_2 = msg.decodedData.canId_2;\n}\nif( msg.decodedData.canId_3)\n{\n    msg_anterior.decodedData.canId_3 = msg.decodedData.canId_3;\n}\nif( msg.decodedData.canId_4)\n{\n    msg_anterior.decodedData.canId_4 = msg.decodedData.canId_4;\n}\nif( msg.decodedData.canId_5)\n{\n    msg_anterior.decodedData.canId_5 = msg.decodedData.canId_5;\n}\nif( msg.decodedData.canId_6)\n{\n    msg_anterior.decodedData.canId_6 = msg.decodedData.canId_6;\n}\nif( msg.decodedData.canId_7)\n{\n    msg_anterior.decodedData.canId_7 = msg.decodedData.canId_7;\n}\nif( msg.decodedData.canId_8)\n{\n    msg_anterior.decodedData.canId_8 = msg.decodedData.canId_8;\n}\nif( msg.decodedData.canId_9)\n{\n    msg_anterior.decodedData.canId_9 = msg.decodedData.canId_9;\n}\nif( msg.decodedData.canId_10)\n{\n    msg_anterior.decodedData.canId_10 = msg.decodedData.canId_10;\n}\nif( msg.decodedData.canId_11)\n{\n    msg_anterior.decodedData.canId_11 = msg.decodedData.canId_11;\n}\nif( msg.decodedData.canId_12)\n{\n    msg_anterior.decodedData.canId_12 = msg.decodedData.canId_12;\n}\nif( msg.decodedData.canId_13)\n{\n    msg_anterior.decodedData.canId_13 = msg.decodedData.canId_13;\n}\nif( msg.decodedData.canId_14)\n{\n    msg_anterior.decodedData.canId_14 = msg.decodedData.canId_14;\n}\nif( msg.decodedData.canId_15)\n{\n    msg_anterior.decodedData.canId_15 = msg.decodedData.canId_15;\n}\nif( msg.decodedData.canId_16)\n{\n    msg_anterior.decodedData.canId_16 = msg.decodedData.canId_16;\n}\nif( msg.decodedData.canId_17)\n{\n    msg_anterior.decodedData.canId_17 = msg.decodedData.canId_17;\n}\nif( msg.decodedData.canId_18)\n{\n    msg_anterior.decodedData.canId_18 = msg.decodedData.canId_18;\n}\nif( msg.decodedData.canId_19)\n{\n    msg_anterior.decodedData.canId_19 = msg.decodedData.canId_19;\n}\nif( msg.decodedData.canId_20)\n{\n    msg_anterior.decodedData.canId_20 = msg.decodedData.canId_20;\n    // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_20);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_21)\n{\n    msg_anterior.decodedData.canId_21 = msg.decodedData.canId_21;\n    lista.push(msg.decodedData.canId_21);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_22)\n{\n    msg_anterior.decodedData.canId_22 = msg.decodedData.canId_22;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_22);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_23)\n{\n    msg_anterior.decodedData.canId_23 = msg.decodedData.canId_23;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_23);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_24)\n{\n    msg_anterior.decodedData.canId_24 = msg.decodedData.canId_24;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_24);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_25)\n{\n    msg_anterior.decodedData.canId_25 = msg.decodedData.canId_25;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_25);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\n\nif( msg.decodedData.canId_26)\n{\n    msg_anterior.decodedData.canId_26 = msg.decodedData.canId_26;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_26);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_27)\n{\n    msg_anterior.decodedData.canId_27 = msg.decodedData.canId_27;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_27);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_28)\n{\n    msg_anterior.decodedData.canId_28 = msg.decodedData.canId_28;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_28);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\nif( msg.decodedData.canId_29)\n{\n    msg_anterior.decodedData.canId_29 = msg.decodedData.canId_29;\n        // Adiciona o novo payload no final da lista\n    lista.push(msg.decodedData.canId_29);\n    if (lista.length > 20) // Se a lista passar de 40 itens, remove o mais antigo (o primeiro)\n    {\n        lista.shift();\n    }\n    // Salva a lista atualizada de volta no contexto do nó\n    context.set('minhaLista', lista);\n}\n\n\n\nif( msg.decodedData.canId_30)\n{\n    msg_anterior.decodedData.canId_30 = msg.decodedData.canId_30;\n}\n\n\n// Substitui o payload da mensagem atual pela lista completa com os últimos 20\nmsg_anterior.lista = lista;\n\nglobal.set (\"msg_anterior_cubesat\", msg_anterior);\n\n\n\n\nreturn msg_anterior;\n\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 700,
+  "y": 280,
+  "wires": [
+   [
+    "cubesat.ritmo.tela"
+   ]
+  ]
+ },
+ {
+  "id": "37e58d8b.f89632",
+  "type": "ui_text_input",
+  "z": "9b6df1cc.293a",
+  "name": "azimute",
+  "label": "SET AZIMUTE",
+  "tooltip": "azimute_set",
+  "group": "2960ec4d.fdf824",
+  "order": 7,
+  "width": "4",
+  "height": "1",
+  "passthru": true,
+  "mode": "number",
+  "delay": "0",
+  "topic": "azimute_set",
+  "x": 260,
+  "y": 780,
+  "wires": [
+   [
+    "de76fb2b.bd271"
+   ]
+  ]
+ },
+ {
+  "id": "7b7fe6b5.d40108",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "Select Device 0005168000136ee4",
+  "func": "if (msg.props.devEui == \"0005168000136ee4\")\n{\n    return msg;\n}\nelse\n{\n    return;\n}\n\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 440,
+  "y": 280,
+  "wires": [
+   [
+    "cubesat.ritmo.atualizado",
+    "333ad9ea.bdc886",
+    "b9c4ef96.18bc7"
+   ]
+  ]
+ },
+ {
+  "id": "e692a2a5.54689",
+  "type": "link in",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "links": [
+   "c06b66f5.9a2418"
+  ],
+  "x": 235,
+  "y": 280,
+  "wires": [
+   [
+    "7b7fe6b5.d40108"
+   ]
+  ]
+ },
+ {
+  "id": "37c2a05c.8c40a",
+  "type": "ui_template",
+  "z": "9b6df1cc.293a",
+  "group": "2960ec4d.fdf824",
+  "name": "mensagem",
+  "order": 13,
+  "width": "14",
+  "height": "1",
+  "format": " <!DOCTYPE html>\n<html>\n<body>\n<!-- <h4 style=\"font-size:80%\"><b>Temperatura - R401</b></h4> -->\n\n<center ng-bind-html=\"msg.payload\" style=\"font-size:100%\"></center>\n\n</body>\n</html> \n",
+  "storeOutMessages": true,
+  "fwdInMessages": true,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "x": 900,
+  "y": 80,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "b9c4ef96.18bc7",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "port 251",
+  "func": "if(msg.props.port == 251)\n{\n    return msg;\n}\nelse\n{\n    return;\n}\n\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 720,
+  "y": 80,
+  "wires": [
+   [
+    "37c2a05c.8c40a"
+   ]
+  ]
+ },
+ {
+  "id": "d6bde4bd.31e39",
+  "type": "ui_gauge",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 9,
+  "width": "3",
+  "height": "3",
+  "gtype": "gage",
+  "title": "V BATERIA",
+  "label": "Volts",
+  "format": "{{value}}",
+  "min": "2.8",
+  "max": "4.1",
+  "colors": [
+   "#ff0033",
+   "#c8ff00",
+   "#37ff00"
+  ],
+  "seg1": "3.2",
+  "seg2": "3.8",
+  "x": 1030,
+  "y": 160,
+  "wires": []
+ },
+ {
+  "id": "430037d3.c11ee8",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "v_bat",
+  "func": "if (msg.decodedData.canId_16?.canData_05)\n{\n    msg.payload = msg.decodedData.canId_16.canData_05/10.0;\n    return msg;\n}\nelse\n{\n    return;\n}\n\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 890,
+  "y": 160,
+  "wires": [
+   [
+    "d6bde4bd.31e39",
+    "30014034.766408"
+   ]
+  ]
+ },
+ {
+  "id": "204043cd.e2fd34",
+  "type": "ui_gauge",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 11,
+  "width": "3",
+  "height": "3",
+  "gtype": "gage",
+  "title": "Temperatura",
+  "label": "°C",
+  "format": "{{value}}",
+  "min": "-40",
+  "max": "120",
+  "colors": [
+   "#1e00ff",
+   "#c8ff00",
+   "#ff0000"
+  ],
+  "seg1": "--20",
+  "seg2": "85",
+  "x": 1030,
+  "y": 200,
+  "wires": []
+ },
+ {
+  "id": "eea48516.e6435",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "temp",
+  "func": "if (msg.decodedData.canId_16?.canData_07)\n{\n    msg.payload = msg.decodedData.canId_16.canData_07;\n    return msg;\n}\nelse\n{\n    return;\n}\n\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 890,
+  "y": 200,
+  "wires": [
+   [
+    "204043cd.e2fd34",
+    "ff3354e7.0e2b7"
+   ]
+  ]
+ },
+ {
+  "id": "cf59a3a3.db5618",
+  "type": "debug",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "active": false,
+  "tosidebar": true,
+  "console": false,
+  "tostatus": false,
+  "complete": "true",
+  "targetType": "full",
+  "x": 1130,
+  "y": 300,
+  "wires": []
+ },
+ {
+  "id": "f1cf6f7f.e0314",
+  "type": "ui_template",
+  "z": "9b6df1cc.293a",
+  "group": "2960ec4d.fdf824",
+  "name": "GlobalCelescData Viewer",
+  "order": 14,
+  "width": "14",
+  "height": "0",
+  "format": "<!DOCTYPE html>\n<html>\n\n<head>\n    \n\n    \n\n    <style>\n        table {\n            table-layout: fixed; overflow-wrap: anywhere;\n            font-family: sans-serif;\n            border-collapse: collapse;\n            width: 100%;\n            height:50%;\n            font-size: 11px;\n        }\n\n        td,\n        th {\n            border: 0.5px solid #525252;\n            text-align: center;\n            padding: 3px 2px;\n        }\n\n        .th-center {\n            text-align: center;\n        }\n\n        .td-center {\n            text-align: center;\n        }\n    </style>\n</head>\n\n<body>\n    <div>\n        <table>\n            <tr>\n                <td colspan=\"5\">EPS CAN ID: {{msg.decodedData.canId_16.id}}</td>\n                <td colspan=\"5\">STATUS: {{msg.decodedData.canId_16.canData_00}}</td>\n                <td colspan=\"5\">VOUT_1: {{msg.decodedData.canId_16.canData_01/10.0}}</td>\n                <td colspan=\"5\">CURRENT_1: {{msg.decodedData.canId_16.canData_02/100.0}}</td>\n                <td colspan=\"5\">VOUT_2: {{msg.decodedData.canId_16.canData_03/10.0}}</td>\n                <td colspan=\"5\">CURRENT_2: {{msg.decodedData.canId_16.canData_04/100.0}}</td>\n                <td colspan=\"5\">BAT_VOUT: {{msg.decodedData.canId_16.canData_05/10.0}}</td>\n                <td colspan=\"5\">CURRENT_SOLAR: {{msg.decodedData.canId_16.canData_06/100.0}}</td>\n                <td colspan=\"5\">TEMP_BAT: {{msg.decodedData.canId_16.canData_07}}</td>\n            </tr>\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">EPS CAN ID: {{msg.decodedData.canId_17.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_17.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">01: {{msg.decodedData.canId_17.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">02: {{msg.decodedData.canId_17.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">03: {{msg.decodedData.canId_17.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">04: {{msg.decodedData.canId_17.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_17.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_17.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">07: {{msg.decodedData.canId_17.canData_07}}</td>-->\n            <!--</tr>-->\n            <tr>\n                <td colspan=\"5\">EPS CAN ID: {{msg.decodedData.canId_18.id}}</td>\n                <td colspan=\"5\">v_solar_bottom: {{msg.decodedData.canId_18.canData_00}}</td>\n                <td colspan=\"5\">v_solar_Yminus: {{msg.decodedData.canId_18.canData_01}}</td>\n                <td colspan=\"5\">v_solar_Y: {{msg.decodedData.canId_18.canData_02}}</td>\n                <td colspan=\"5\">v_solar_Xminus: {{msg.decodedData.canId_18.canData_03}}</td>\n                <td colspan=\"5\">v_solar_X: {{msg.decodedData.canId_18.canData_04}}</td>\n                <td colspan=\"5\">v_solar_top: {{msg.decodedData.canId_18.canData_05}}</td>\n                <td colspan=\"5\">v_solar_vout: {{msg.decodedData.canId_18.canData_06}}</td>\n                <td colspan=\"5\">STATUS: {{msg.decodedData.canId_18.canData_07}}</td>\n            </tr>\n            \n            <tr>\n                <td colspan=\"5\">OBD_CAN ID: {{msg.decodedData.canId_1.id}}</td>\n                <td colspan=\"5\">00: {{msg.decodedData.canId_1.canData_00}}</td>\n                <td colspan=\"5\">01: {{msg.decodedData.canId_1.canData_01}}</td>\n                <td colspan=\"5\">02: {{msg.decodedData.canId_1.canData_02}}</td>\n                <td colspan=\"5\">03: {{msg.decodedData.canId_1.canData_03}}</td>\n                <td colspan=\"5\">04: {{msg.decodedData.canId_1.canData_04}}</td>\n                <td colspan=\"5\">05: {{msg.decodedData.canId_1.canData_05}}</td>\n                <td colspan=\"5\">06: {{msg.decodedData.canId_1.canData_06}}</td>\n                <td colspan=\"5\">ciclos: {{msg.decodedData.canId_1.canData_07}}</td>\n            </tr>\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">OBD_CAN ID: {{msg.decodedData.canId_2.id}}</td>-->\n            <!--    <td colspan=\"5\">status: {{msg.decodedData.canId_2.canData_00}}</td>-->\n            <!--    <td colspan=\"10\">Setpoint_Atitude: {{msg.decodedData.canId_2.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">BLDC_Kp: {{msg.decodedData.canId_2.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">BLDC_Ki: {{msg.decodedData.canId_2.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">BLDC_Kd: {{msg.decodedData.canId_2.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_2.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_2.canData_06}}</td>-->\n            <!--</tr>-->\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">OBD_CAN ID: {{msg.decodedData.canId_3.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_3.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">01: {{msg.decodedData.canId_3.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">02: {{msg.decodedData.canId_3.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">03: {{msg.decodedData.canId_3.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">04: {{msg.decodedData.canId_3.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_3.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_3.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">07: {{msg.decodedData.canId_3.canData_07}}</td>-->\n            <!--</tr>-->\n            <tr>\n                <td colspan=\"5\">OBD_CAN ID: {{msg.decodedData.canId_4.id}}</td>\n                <td colspan=\"5\">STATUS: {{msg.decodedData.canId_4.canData_00}}</td>\n                <td colspan=\"5\">01: {{msg.decodedData.canId_4.canData_01}}</td>\n                <td colspan=\"5\">02: {{msg.decodedData.canId_4.canData_02}}</td>\n                <td colspan=\"5\">03: {{msg.decodedData.canId_4.canData_03}}</td>\n                <td colspan=\"5\">04: {{msg.decodedData.canId_4.canData_04}}</td>\n                <td colspan=\"5\">05: {{msg.decodedData.canId_4.canData_05}}</td>\n                <td colspan=\"5\">06: {{msg.decodedData.canId_4.canData_06}}</td>\n                <td colspan=\"5\">07: {{msg.decodedData.canId_4.canData_07}}</td>\n            </tr>\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">OBD_CAN AIS: {{msg.decodedData.canId_26.id}}</td>-->\n            <!--    <td colspan=\"20\">mmsi: {{msg.decodedData.canId_26.canData_00}}</td>-->\n            <!--    <td colspan=\"10\">área km²: {{msg.decodedData.canId_26.canData_01*100}}</td>-->\n            <!--    <td colspan=\"10\">%: {{msg.decodedData.canId_26.canData_02/100.00}}</td>-->\n            <!--</tr>            -->\n            <tr>\n                <td colspan=\"5\">BLDC_X_CAN ID: {{msg.decodedData.canId_5.id}}</td>\n                <td colspan=\"10\">MeasuredSpeed: {{msg.decodedData.canId_5.canData_00}}</td>\n                <td colspan=\"10\">RefSpeed: {{msg.decodedData.canId_5.canData_01}}</td>\n                <td colspan=\"10\">Measered CURRENT: {{msg.decodedData.canId_5.canData_02}}</td>\n                <td colspan=\"10\">RefTorque: {{msg.decodedData.canId_5.canData_03}}</td>\n            </tr>\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">BLDC_X_CAN ID: {{msg.decodedData.canId_6.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_6.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">01: {{msg.decodedData.canId_6.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">02: {{msg.decodedData.canId_6.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">03: {{msg.decodedData.canId_6.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">04: {{msg.decodedData.canId_6.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_6.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_6.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">07: {{msg.decodedData.canId_6.canData_07}}</td>-->\n            <!--</tr>-->\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">BLDC_Y_CAN ID: {{msg.decodedData.canId_7.id}}</td>-->\n            <!--    <td colspan=\"10\">MeasuredSpeed: {{msg.decodedData.canId_7.canData_00}}</td>-->\n            <!--    <td colspan=\"10\">RefSpeed: {{msg.decodedData.canId_7.canData_01}}</td>-->\n            <!--    <td colspan=\"10\">Measered CURRENT: {{msg.decodedData.canId_7.canData_02}}</td>-->\n            <!--    <td colspan=\"10\">RefTorque: {{msg.decodedData.canId_7.canData_03}}</td>-->\n            <!--</tr>-->\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">BLDC_Y_CAN ID: {{msg.decodedData.canId_8.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_8.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">01: {{msg.decodedData.canId_8.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">02: {{msg.decodedData.canId_8.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">03: {{msg.decodedData.canId_8.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">04: {{msg.decodedData.canId_8.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_8.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_8.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">07: {{msg.decodedData.canId_8.canData_07}}</td>-->\n            <!--</tr>-->\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">BLDC_Z_CAN ID: {{msg.decodedData.canId_9.id}}</td>-->\n            <!--    <td colspan=\"10\">MeasuredSpeed: {{msg.decodedData.canId_9.canData_00}}</td>-->\n            <!--    <td colspan=\"10\">RefSpeed: {{msg.decodedData.canId_9.canData_01}}</td>-->\n            <!--    <td colspan=\"10\">Measered CURRENT: {{msg.decodedData.canId_9.canData_02}}</td>-->\n            <!--    <td colspan=\"10\">RefTorque: {{msg.decodedData.canId_9.canData_03}}</td>-->\n            <!--</tr>-->\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">BLDC_Z_CAN ID: {{msg.decodedData.canId_10.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_10.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">01: {{msg.decodedData.canId_10.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">02: {{msg.decodedData.canId_10.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">03: {{msg.decodedData.canId_10.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">04: {{msg.decodedData.canId_10.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_10.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_10.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">07: {{msg.decodedData.canId_10.canData_07}}</td>-->\n            <!--</tr>-->\n            <tr>\n                <td colspan=\"5\">ACS_CAN ID: {{msg.decodedData.canId_11.id}}</td>\n                <td colspan=\"5\">aX: {{msg.decodedData.canId_11.canData_00/10.0}}</td>\n                <td colspan=\"5\">aY: {{msg.decodedData.canId_11.canData_01/10.0}}</td>\n                <td colspan=\"5\">aZ: {{msg.decodedData.canId_11.canData_02/10.0}}</td>\n                <td colspan=\"10\">temp: {{(msg.decodedData.canId_11.canData_03*256 + msg.decodedData.canId_11.canData_04)/10.0 }}</td>\n                <td colspan=\"10\">press:{{(msg.decodedData.canId_11.canData_05*256 + msg.decodedData.canId_11.canData_06)/10.0 }}</td>\n                <td colspan=\"5\">umidade: {{msg.decodedData.canId_11.canData_07}}</td>\n            </tr>\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">ACS_CAN ID: {{msg.decodedData.canId_12.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_12.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">01: {{msg.decodedData.canId_12.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">02: {{msg.decodedData.canId_12.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">03: {{msg.decodedData.canId_12.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">04: {{msg.decodedData.canId_12.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_12.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_12.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">07: {{msg.decodedData.canId_12.canData_07}}</td>-->\n            <!--</tr>-->\n            <tr>\n                <td colspan=\"5\">ACS_CAN ID: {{msg.decodedData.canId_13.id}}</td>\n                <td colspan=\"10\">Setpoint_atitude: {{msg.decodedData.canId_13.canData_00}}</td>\n                <td colspan=\"10\">Esforço PID: {{msg.decodedData.canId_13.canData_01}}</td>\n                <td colspan=\"10\">Azimute satelital: {{msg.decodedData.canId_13.canData_02}}</td>\n                <td colspan=\"10\">Vel. angular Azim.: {{msg.decodedData.canId_13.canData_03}}</td>\n\n            </tr>\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">CAN ID: {{msg.decodedData.canId_14.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_14.canData_00}}</td>-->\n            <!--    <td colspan=\"10\">RefSpeed: {{msg.decodedData.canId_14.canData_00}}</td>-->\n            <!--    <td colspan=\"10\">RefTorque: {{msg.decodedData.canId_14.canData_01}}</td>-->\n            <!--    <td colspan=\"10\">02: {{msg.decodedData.canId_14.canData_02}}</td>-->\n            <!--    <td colspan=\"10\">03: {{msg.decodedData.canId_14.canData_03}}</td>-->\n            <!--</tr>-->\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">CAN ID: {{msg.decodedData.canId_15.id}}</td>-->\n            <!--    <td colspan=\"10\">RefSpeed: {{msg.decodedData.canId_15.canData_00}}</td>-->\n            <!--    <td colspan=\"10\">RefTorque: {{msg.decodedData.canId_15.canData_01}}</td>-->\n            <!--    <td colspan=\"10\">02: {{msg.decodedData.canId_15.canData_02}}</td>-->\n            <!--    <td colspan=\"10\">03: {{msg.decodedData.canId_15.canData_03}}</td>-->\n            <!--</tr>-->\n            \n\n            <tr>\n                <td colspan=\"5\">TTC_CAN ID: {{msg.decodedData.canId_19.id}}</td>\n                <td colspan=\"20\">lat: {{msg.decodedData.canId_19.canData_00}}.{{msg.decodedData.canId_19.canData_01}}</td>\n                <td colspan=\"20\">long: {{msg.decodedData.canId_19.canData_02}}.{{msg.decodedData.canId_19.canData_03}}</td>\n            </tr>            \n            <!--<tr>-->\n            <!--    <td colspan=\"5\">TTC_CAN ADSB: {{msg.decodedData.canId_20.id}} e {{msg.decodedData.canId_21.id}}</td>-->\n            <!--    <td colspan=\"40\">last: {{msg.decodedData.canId_20.canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_20.canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_20.canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_20.canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_20.canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_20.canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_20.canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_21.canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_21.canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_21.canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_21.canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_21.canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_21.canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.decodedData.canId_21.canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}</td>-->\n\n            <!--</tr>   -->\n            <tr>   \n            <td colspan=\"5\">lista ultimas 10 msg:</td>\n            <td colspan=\"20\">\n                {{msg.lista[0].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[0].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[0].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[0].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[0].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[0].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[0].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[1].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[1].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[1].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[1].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[1].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[1].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[1].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[2].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[2].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[2].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[2].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[2].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[2].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[2].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[3].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[3].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[3].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[3].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[3].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[3].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[3].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[4].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[4].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[4].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[4].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[4].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[4].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[4].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[5].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[5].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[5].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[5].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[5].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[5].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[5].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[6].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[6].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[6].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[6].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[6].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[6].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[6].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[7].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[7].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[7].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[7].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[7].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[7].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[7].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[8].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[8].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[8].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[8].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[8].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[8].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[8].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[9].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[9].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[9].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[9].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[9].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[9].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[9].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[10].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[10].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[10].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[10].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[10].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[10].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[10].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[11].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[11].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[11].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[11].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[11].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[11].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[11].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[12].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[12].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[12].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[12].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[12].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[12].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[12].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[13].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[13].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[13].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[13].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[13].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[13].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[13].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[14].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[14].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[14].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[14].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[14].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[14].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[14].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[15].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[15].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[15].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[15].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[15].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[15].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[15].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[16].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[16].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[16].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[16].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[16].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[16].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[16].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[17].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[17].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[17].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[17].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[17].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[17].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[17].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n                {{msg.lista[18].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[18].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[18].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[18].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[18].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[18].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[18].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[19].canData_00.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[19].canData_01.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[19].canData_02.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[19].canData_03.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[19].canData_04.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[19].canData_05.toString(16).padStart(2,\"0\").toUpperCase()}}{{msg.lista[19].canData_06.toString(16).padStart(2,\"0\").toUpperCase()}}<br>\n            </td>\n            <td colspan=\"20\"><img class=\"cubesat-mapa\" src=\"https://mediaserver.maua.br/cubesat/latestTrajectory\" style=\"display: block; margin: auto; width: 100%; height: auto;\" onerror=\"this.style.display='none'; this.nextElementSibling.style.display='block';\" onload=\"this.style.display='block'; this.nextElementSibling.style.display='none';\" /><div style=\"display: none; padding: 20px; color: #8b98a5;\">mapa indisponível sem internet</div></td>\n            </tr>   \n            \n                            \n            <!--<tr>-->\n            <!--    <td colspan=\"5\">TTC_CAN ADSB_2 ID: {{msg.decodedData.canId_22.id}}</td>-->\n            <!--    <td colspan=\"5\">00: {{msg.decodedData.canId_22.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">01: {{msg.decodedData.canId_22.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">02: {{msg.decodedData.canId_22.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">03: {{msg.decodedData.canId_22.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">04: {{msg.decodedData.canId_22.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">05: {{msg.decodedData.canId_22.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">06: {{msg.decodedData.canId_22.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">07: {{msg.decodedData.canId_22.canData_07}}</td>-->\n            <!--</tr>            -->\n            <!--<tr>-->\n            <!--    <td colspan=\"5\">TTC_CAN ID: {{msg.decodedData.canId_23.id}}</td>-->\n            <!--    <td colspan=\"5\">AIS 00: {{msg.decodedData.canId_23.canData_00}}</td>-->\n            <!--    <td colspan=\"5\">AIS 01: {{msg.decodedData.canId_23.canData_01}}</td>-->\n            <!--    <td colspan=\"5\">AIS 02: {{msg.decodedData.canId_23.canData_02}}</td>-->\n            <!--    <td colspan=\"5\">AIS 03: {{msg.decodedData.canId_23.canData_03}}</td>-->\n            <!--    <td colspan=\"5\">AIS 04: {{msg.decodedData.canId_23.canData_04}}</td>-->\n            <!--    <td colspan=\"5\">AIS 05: {{msg.decodedData.canId_23.canData_05}}</td>-->\n            <!--    <td colspan=\"5\">AIS 06: {{msg.decodedData.canId_23.canData_06}}</td>-->\n            <!--    <td colspan=\"5\">AIS 07: {{msg.decodedData.canId_23.canData_07}}</td>-->\n            <!--</tr>-->\n        </table>\n<script>\n// recarrega o mapa a cada 60 s (quando houver internet)\nsetInterval(function () {\n    document.querySelectorAll('img.cubesat-mapa').forEach(function (i) {\n        i.src = 'https://mediaserver.maua.br/cubesat/latestTrajectory?t=' + Date.now();\n    });\n}, 60000);\n</script>\n    </div>\n\n\n\n</body>\n\n</html>",
+  "storeOutMessages": true,
+  "fwdInMessages": true,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "x": 950,
+  "y": 120,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "48656acd.ade394",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "verify_pin",
+  "func": "var pins = [\"0210\"];\nvar verified = false;\n\nfor(var i=0;i<pins.length;i++){\n    if(msg.passcode == pins[i]){\n        verified = true;\n        break;\n    }\n}\n\nmsg.verified = verified;\n\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 800,
+  "y": 620,
+  "wires": [
+   [
+    "f7edcb40.14be18"
+   ]
+  ]
+ },
+ {
+  "id": "f7edcb40.14be18",
+  "type": "switch",
+  "z": "9b6df1cc.293a",
+  "name": "check",
+  "property": "verified",
+  "propertyType": "msg",
+  "rules": [
+   {
+    "t": "true"
+   },
+   {
+    "t": "false"
+   }
+  ],
+  "checkall": "false",
+  "repair": false,
+  "outputs": 2,
+  "x": 1030,
+  "y": 620,
+  "wires": [
+   [
+    "3905656a.41912a"
+   ],
+   []
+  ]
+ },
+ {
+  "id": "3905656a.41912a",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "pin_ok",
+  "func": "var msg2 = {};\nmsg2.topic = \"Pin successfully verified!\";\nmsg2.payload = \"\";\n    \nreturn [msg, msg2];",
+  "outputs": 2,
+  "noerr": 0,
+  "x": 790,
+  "y": 680,
+  "wires": [
+   [
+    "bc2c8974.279618",
+    "331818d3.2af73",
+    "cubesat.enviar"
+   ],
+   []
+  ]
+ },
+ {
+  "id": "df46ad52.4db71",
+  "type": "ui_button",
+  "z": "9b6df1cc.293a",
+  "name": "",
+  "group": "2960ec4d.fdf824",
+  "order": 8,
+  "width": "4",
+  "height": "1",
+  "passthru": false,
+  "label": "Update",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "icon": "lock",
+  "payload": "lastmessagecubesat",
+  "payloadType": "global",
+  "topic": "show",
+  "topicType": "str",
+  "x": 800,
+  "y": 560,
+  "wires": [
+   [
+    "24a2cb80.fa9cf4"
+   ]
+  ]
+ },
+ {
+  "id": "24a2cb80.fa9cf4",
+  "type": "ui_template",
+  "z": "9b6df1cc.293a",
+  "group": "9f8692ce.c265c",
+  "name": "pin_insert2",
+  "order": 13,
+  "width": "0",
+  "height": "0",
+  "format": "<div ng-init=\"init()\" id=\"pin_insert\" class=\"dialog\">\n    \n    <div class=\"dialog_content\">\n        \n        <div class=\"dialog_header\">\n            <span ng-click=\"closeDialog()\" class=\"close\">&times;</span>\n            <h2 style=\"margin:10px\">Insert PIN</h2>\n        </div>\n        \n        <div class=\"dialog_body\">\n\n           <div layout=\"row\" layout-align=\"center\">\n                <div class=\"number_placeholder\">\n                    {{passcode.substring(0, 1)}}\n                </div>\n                <div class=\"number_placeholder\">\n                    {{passcode.substring(1, 2)}}\n                </div>\n                <div class=\"number_placeholder\">\n                    {{passcode.substring(2, 3)}}\n                </div>\n                <div class=\"number_placeholder\">\n                    {{passcode.substring(3, 4)}}\n                </div>\n            </div>\n            \n            <div layout=\"column\" layout-align=\"center\" style=\"margin-top: 10px\">\n                <div layout=\"row\" layout-align=\"center\">\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(1)\">1</md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(2)\">2</md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(3)\">3</md-button>\n                    </div>\n                </div>\n                 <div layout=\"row\" layout-align=\"center\">\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(4)\">4</md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(5)\">5</md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(6)\">6</md-button>\n                    </div>\n                </div>\n                 <div layout=\"row\" layout-align=\"center\">\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(7)\">7</md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(8)\">8</md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(9)\">9</md-button>\n                    </div>\n                </div>\n                 <div layout=\"row\" layout-align=\"center\">\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"confirm()\">\n                            <ng-md-icon icon=\"done\" style=\"color:#fff;\"></ng-md-icon>\n                        </md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"add(0)\">0</md-button>\n                    </div>\n                    <div class=\"number_box\">\n                        <md-button class=\"pin\" ng-click=\"delete()\">\n                            <ng-md-icon icon=\"arrow_back\" style=\"color:#fff;\"></ng-md-icon>\n                        </md-button>\n                    </div>\n                </div>\n            </div> \n          \n        </div> <!--dialog_body-->\n    </div> <!--dialog_content-->\n</div>  <!--dialog-->\n\n\n<style>\n\n/* The Dialog (background) */\n.dialog {\n    display: none; /* Hidden by default */\n    position: fixed; /* Stay in place */\n    z-index: 9999; /* Sit on top */\n    left: 0;\n    top: 0;\n    width: 100%; /* Full width */\n    height: 100%; /* Full height */\n    overflow: auto; /* Enable scroll if needed */\n    background-color: rgb(0,0,0); /* Fallback color */\n    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */\n    -webkit-transform: translateZ(0px);\n    -webkit-transform: translate3d(0,0,0);\n    -webkit-perspective: 1000;\n}\n\n.dialog_content {\n    position: absolute;\n    background-color: #fff;\n    left: calc(50% - 170px);\n    top: 30px;\n    border-radius: 10px;\n    padding: 0;\n    width: 340px;\n    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);\n    -webkit-animation-name: animatetop;\n    animation-name: animatetop;\n    animation-duration: 0.4s;\n}\n\n/* Media query for smartphones (to Fix?) */\n@media only screen and (min-device-width : 375px) and (max-device-width : 667px) { \n    .dialog_content {\n    margin-top: 5%;\n    margin-left: 5%;\n}\n}\n\n/* Add Animation */\n@-webkit-keyframes animatetop {\n    from {top: -300px; opacity: 0} \n    to {top: 0; opacity: 1}\n}\n\n@keyframes animatetop {\n    from {top: -300px; opacity: 0}\n    to {top: 0; opacity: 1}\n}\n\n/* Dialog Header */\n.dialog_header {\n    padding: 2px 16px;\n    background-color: #03A9F4;\n    border-radius: 10px 10px 0 0;\n    color: white;\n}\n\n/* Dialog Body */\n.dialog_body {padding: 5px;}\n\n/* The Close Button */\n.close {\n    color: #fff;\n    float: right;\n    font-size: 28px;\n    font-weight: bold;\n    cursor: pointer;\n}\n\n.close:hover,\n.close:focus {\n    color: #1565C0;\n    text-decoration: none;\n    cursor: pointer;\n}\n\n/* __ */\n.number_placeholder{\n    width: 50px;\n    height: 34px;\n    margin: 10px;\n    font-size: 20pt;\n    text-align: center;\n    border-bottom: 1px solid black;\n}\n\n/* Number container */\n.number_box{\n    margin: 5px;\n}\n\n/* Buttons style */\n.pin {\n    min-height: 50px;\n    min-width: 50px;\n    font-weight: bold;\n    margin: 0px 10px 10px 0px;\n    box-shadow: 4px 4px 6px 0 #dadada;\n    background-color: #29B6F6;\n    color: #fff;\n}\n\n.pin:not([disabled]):hover {\n    background-color: #03A9F4;\n}\n\n.btn1 {\n  color : rgb(49, 46, 46);\n  background-color: rgba(255, 222, 121, 0.96);\n  border-radius: 10px 0 0 10px;\n  font-size: 16px;\n}\n\n.btn1:not([disabled]):hover {\n  background-color: rgba(107, 103, 91, 0.96);\n  color: white;\n}\n\n.btn1[disabled] {\n  color : rgb(187, 187, 187);\n  background-color: rgba(230, 230, 229, 0.96);\n}\n\n/* (quiosque) tema escuro: texto escuro dentro da janela branca */\n.dialog_content .number_placeholder { color: #000 !important; }\n</style>\n\n<script>\n\n/**\n * pin_dialog.js\n * Node-Red UI template for Node-Red Dashboard. \n * Custom dialog that asks for a PIN to allow actions\n * Enjoy it :). \n * -- Daniel\n *\n *\n * @license The Unlicense, http://unlicense.org/\n * @version 0.2\n * @author  Daniel Lando, https://github.com/robertsLando\n * @updated 2019-03-18\n * @link    ----\n *\n *\n */\n\nvar dialog;\n\n/* ==== */\n(function(scope) {\n    \n    scope.passcode = \"\";\n    scope.payload = \"\";\n    scope.inited = false;\n    \n    scope.init = function() {\n        scope.passcode = \"\";\n        //Hide the md-panel\n        $('#pin_insert').parent().parent().css(\"display\", \"none\");\n        //This trick make it works on smartphones too :)\n        dialog = $('#pin_insert').detach();\n        //remove any previously added pin dialog\n        $('.dialog').remove();\n    }\n    \n    scope.showDialog = function() {\n        dialog.appendTo(document.body);\n        dialog.css(\"display\", \"block\");\n    }\n    \n    scope.closeDialog = function(){\n        dialog.css(\"display\", \"none\");\n    }\n    \n    scope.add = function(value) {\n        if(scope.passcode.length < 4) {\n            scope.passcode = scope.passcode + value;\n            if(scope.passcode.length == 4) {\n                console.log(\"The four digit code was entered\");\n                   \n            }\n        }\n    }\n \n    scope.delete = function() {\n        if(scope.passcode.length > 0) {\n            scope.passcode = scope.passcode.substring(0, scope.passcode.length - 1);\n        }\n    }\n    \n    scope.confirm = function() {\n        if(scope.passcode.length == 4) {\n            scope.send({passcode: scope.passcode, payload : scope.payload});\n            scope.closeDialog();\n            scope.passcode = \"\";\n            scope.payload = \"\";\n        }\n    }\n\n    scope.$watch('msg', function(data) {\n        if(data && data.topic){\n            switch(data.topic){\n               case \"show\":\n                   // (quiosque) abre sempre: resendOnRefresh desligado\n                   scope.payload = data.payload;\n                   scope.showDialog();\n                break;\n                case \"close\": \n                    scope.closeDialog(); \n                break;\n            }\n        }\n    });\n})(scope);\n\n</script>\n",
+  "storeOutMessages": true,
+  "fwdInMessages": true,
+  "resendOnRefresh": false,
+  "templateScope": "local",
+  "x": 1010,
+  "y": 560,
+  "wires": [
+   [
+    "48656acd.ade394"
+   ]
+  ]
+ },
+ {
+  "id": "d7caa0be.3c3bf8",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "lastmessagecubesat \"devEui\": \"0005168000136ee4\"",
+  "func": "\nglobal.set('lastmessagecubesat',msg.payload)\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 940,
+  "y": 500,
+  "wires": [
+   [
+    "df46ad52.4db71"
+   ]
+  ]
+ },
+ {
+  "id": "30014034.766408",
+  "type": "ui_chart",
+  "z": "9b6df1cc.293a",
+  "name": "Volts",
+  "group": "2960ec4d.fdf824",
+  "order": 10,
+  "width": "4",
+  "height": "3",
+  "label": "",
+  "chartType": "line",
+  "legend": "false",
+  "xformat": "auto",
+  "interpolate": "linear",
+  "nodata": "",
+  "dot": false,
+  "ymin": "2",
+  "ymax": "5",
+  "removeOlder": "2",
+  "removeOlderPoints": "",
+  "removeOlderUnit": "3600",
+  "cutout": 0,
+  "useOneColor": false,
+  "useUTC": false,
+  "colors": [
+   "#00ffff",
+   "#00c8ff",
+   "#ff7f0e",
+   "#00ffff",
+   "#98df8a",
+   "#d62728",
+   "#ff9896",
+   "#9467bd",
+   "#c5b0d5"
+  ],
+  "outputs": 1,
+  "useDifferentColor": false,
+  "x": 1210,
+  "y": 160,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "ff3354e7.0e2b7",
+  "type": "ui_chart",
+  "z": "9b6df1cc.293a",
+  "name": "°C",
+  "group": "2960ec4d.fdf824",
+  "order": 12,
+  "width": "4",
+  "height": "3",
+  "label": "",
+  "chartType": "line",
+  "legend": "false",
+  "xformat": "dd HH:mm",
+  "interpolate": "linear",
+  "nodata": "",
+  "dot": false,
+  "ymin": "-20",
+  "ymax": "60",
+  "removeOlder": "2",
+  "removeOlderPoints": "",
+  "removeOlderUnit": "3600",
+  "cutout": 0,
+  "useOneColor": false,
+  "useUTC": false,
+  "colors": [
+   "#00ffff",
+   "#00c8ff",
+   "#ff7f0e",
+   "#00ffff",
+   "#98df8a",
+   "#d62728",
+   "#ff9896",
+   "#9467bd",
+   "#c5b0d5"
+  ],
+  "outputs": 1,
+  "useDifferentColor": false,
+  "x": 1210,
+  "y": 200,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "36609609.281dea",
+  "type": "mqtt-broker",
+  "name": "",
+  "broker": "networkserver2.maua.br",
+  "port": "1883",
+  "clientid": "",
+  "usetls": false,
+  "compatmode": false,
+  "keepalive": "60",
+  "cleansession": true,
+  "birthTopic": "",
+  "birthQos": "0",
+  "birthPayload": "",
+  "closeTopic": "",
+  "closeQos": "0",
+  "closePayload": "",
+  "willTopic": "",
+  "willQos": "0",
+  "willPayload": ""
+ },
+ {
+  "id": "2960ec4d.fdf824",
+  "type": "ui_group",
+  "z": "",
+  "name": "CubeDesign MauáSat",
+  "tab": "9c001fa0.24b65",
+  "order": 2,
+  "disp": true,
+  "width": "14",
+  "collapse": false
+ },
+ {
+  "id": "9f8692ce.c265c",
+  "type": "ui_group",
+  "z": "",
+  "name": "dialogbox",
+  "tab": "9c001fa0.24b65",
+  "order": 3,
+  "disp": false,
+  "width": "1",
+  "collapse": false
+ },
+ {
+  "id": "9c001fa0.24b65",
+  "type": "ui_tab",
+  "name": "CubeSat",
+  "icon": "dashboard",
+  "order": 1,
+  "disabled": false,
+  "hidden": false
+ },
+ {
+  "id": "cubesat.ui_base",
+  "type": "ui_base",
+  "theme": {
+   "name": "theme-dark",
+   "themeState": {
+    "base-font": {
+     "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+     "edited": true
+    },
+    "base-color": {
+     "value": "#4fa3ff",
+     "edited": true
+    },
+    "page-backgroundColor": {
+     "value": "#0f1419",
+     "edited": true
+    },
+    "page-titlebar-backgroundColor": {
+     "value": "#171d24",
+     "edited": true
+    },
+    "page-sidebar-backgroundColor": {
+     "value": "#171d24",
+     "edited": true
+    },
+    "group-backgroundColor": {
+     "value": "#171d24",
+     "edited": true
+    },
+    "group-textColor": {
+     "value": "#4fa3ff",
+     "edited": true
+    },
+    "group-borderColor": {
+     "value": "#2b3540",
+     "edited": true
+    },
+    "widget-textColor": {
+     "value": "#e6edf3",
+     "edited": true
+    },
+    "widget-backgroundColor": {
+     "value": "#1e262f",
+     "edited": true
+    }
+   },
+   "angularTheme": {
+    "primary": "blue",
+    "accents": "blue",
+    "warn": "red",
+    "background": "grey",
+    "palette": "dark"
+   }
+  },
+  "site": {
+   "name": "CubeSat",
+   "hideToolbar": "true",
+   "allowSwipe": "false",
+   "lockMenu": "false",
+   "allowTempTheme": "true",
+   "dateFormat": "DD/MM/YYYY",
+   "sizes": {
+    "sx": 48,
+    "sy": 48,
+    "gx": 6,
+    "gy": 6,
+    "cx": 6,
+    "cy": 6,
+    "px": 0,
+    "py": 0
+   }
+  }
+ },
+ {
+  "id": "cubesat.grp.radio",
+  "type": "ui_group",
+  "name": "Rádio LoRa",
+  "tab": "9c001fa0.24b65",
+  "order": 4,
+  "disp": true,
+  "width": "14",
+  "collapse": false,
+  "className": ""
+ },
+ {
+  "id": "cubesat.serialport",
+  "type": "serial-port",
+  "name": "LoRa FTDI",
+  "serialport": "/dev/ttyUSB0",
+  "serialbaud": "115200",
+  "databits": 8,
+  "parity": "none",
+  "stopbits": 1,
+  "waitfor": "",
+  "dtr": "none",
+  "rts": "none",
+  "cts": "none",
+  "dsr": "none",
+  "newline": "\\n",
+  "bin": "false",
+  "out": "char",
+  "addchar": "",
+  "responsetimeout": 10000
+ },
+ {
+  "id": "cubesat.enviar",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "Enviar pelo LoRa",
+  "func": "// Manda o comando pelo módulo LoRa (serial FTDI): o mesmo texto JSON que\n// antes ia ao ChirpStack, numa linha terminada em \\n.\nconst texto = String(msg.payload).trim();\nif (!texto) return null;\nconst hora = new Date().toLocaleTimeString('pt-BR');\nlet resumo = texto;\ntry {\n    const j = JSON.parse(texto);\n    const bytes = Buffer.from(j.data || '', 'base64').toString('hex').toUpperCase()\n        .replace(/(..)(?!$)/g, '$1 ');\n    resumo = `${j.devEui || '?'} · ${bytes}`;\n} catch (e) { /* não é JSON: mostra o texto */ }\nnode.status({fill: 'green', shape: 'dot', text: `${hora} ${resumo}`});\nreturn [{payload: texto + \"\\n\"}, {payload: `${hora} · ${resumo}`}];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "x": 2420,
+  "y": 1200,
+  "wires": [
+   [
+    "cubesat.serial.out"
+   ],
+   [
+    "cubesat.txt.ultimo"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.serial.out",
+  "type": "serial out",
+  "z": "9b6df1cc.293a",
+  "name": "LoRa (enviar)",
+  "serial": "cubesat.serialport",
+  "x": 2660,
+  "y": 1180,
+  "wires": []
+ },
+ {
+  "id": "cubesat.txt.ultimo",
+  "type": "ui_text",
+  "z": "9b6df1cc.293a",
+  "group": "cubesat.grp.radio",
+  "order": 2,
+  "width": "9",
+  "height": "1",
+  "name": "",
+  "label": "Último comando",
+  "format": "{{msg.payload}}",
+  "layout": "row-spread",
+  "className": "",
+  "style": false,
+  "x": 2660,
+  "y": 1220,
+  "wires": []
+ },
+ {
+  "id": "cubesat.serial.in",
+  "type": "serial in",
+  "z": "9b6df1cc.293a",
+  "name": "LoRa (receber)",
+  "serial": "cubesat.serialport",
+  "x": 2180,
+  "y": 1300,
+  "wires": [
+   [
+    "cubesat.repasse",
+    "cubesat.decodificar"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.repasse",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "linha -> dashboard Python",
+  "func": "// Repassa cada linha recebida do LoRa ao dashboard Python (porta TCP).\nlet linha = Buffer.isBuffer(msg.payload) ? msg.payload.toString('latin1')\n                                         : String(msg.payload);\nlinha = linha.replace(/[\\r\\n]+$/, '');\nif (!linha) return null;\nmsg.payload = linha + \"\\n\";\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 2420,
+  "y": 1300,
+  "wires": [
+   [
+    "cubesat.tcp"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.tcp",
+  "type": "tcp out",
+  "z": "9b6df1cc.293a",
+  "name": "dashboard Python (porta 5555)",
+  "host": "",
+  "port": "5555",
+  "beserver": "server",
+  "base64": false,
+  "end": false,
+  "tls": "",
+  "x": 2680,
+  "y": 1300,
+  "wires": []
+ },
+ {
+  "id": "cubesat.decodificar",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "linha CAN -> decodedData (CUBESATProtocolParser)",
+  "func": "// Linha recebida do LoRa (serial) -> a mesma mensagem que o fluxo antigo\n// recebia do ChirpStack. Saída 1: CAN decodificado (porta 250);\n// saída 2: linha de texto, ex. \"Mauasat online Compiled on ...\" (porta 251).\n// O CUBESATProtocolParser abaixo é o do codec1.txt, sem alterações.\nfunction CUBESATProtocolParser(bytes)\n{   \n\n    bytes = JSON.parse(bytes);\n    var decoded = {};\n    \n    for (var i = 0; i < bytes.length; i++)\n    {\n        var canMessage = bytes[i].split(\":\");\n        var canId = canMessage[0]\n        var canData = canMessage[1]\n        var canBytes = Buffer.from(canData, 'hex');\n        var byteIndex = 0;\n\n        switch (canId)\n        {\n            // canId 1\n            case \"F800\":\n                decoded.canId_1 = {};\n                decoded.canId_1.id = canId;\n                decoded.canId_1.canData_00 = canBytes[byteIndex++];\n                decoded.canId_1.canData_01 = canBytes[byteIndex++];\n                decoded.canId_1.canData_02 = canBytes[byteIndex++];\n                decoded.canId_1.canData_03 = canBytes[byteIndex++];\n                decoded.canId_1.canData_04 = canBytes[byteIndex++];\n                decoded.canId_1.canData_05 = canBytes[byteIndex++];\n                decoded.canId_1.canData_06 = canBytes[byteIndex++];\n                decoded.canId_1.canData_07 = canBytes[byteIndex++];\n                break;\n                \n            // canId 2\n            case \"2004\":\n                decoded.canId_2 = {};\n                decoded.canId_1.id = canId;\n                decoded.canId_2.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_2.canData_01 = canBytes[byteIndex++];\n                decoded.canId_2.canData_02 = canBytes[byteIndex++];\n                decoded.canId_2.canData_03 = canBytes[byteIndex++];\n                decoded.canId_2.canData_04 = canBytes[byteIndex++];\n                decoded.canId_2.canData_05 = canBytes[byteIndex++];\n                decoded.canId_2.canData_06 = canBytes[byteIndex++];\n                break;\n                \n            // canId 3\n            case \"2805\":   \n                decoded.canId_3 = {};\n                decoded.canId_3.id = canId;\n                decoded.canId_3.canData_00 = canBytes[byteIndex++];\n                decoded.canId_3.canData_01 = canBytes[byteIndex++];\n                decoded.canId_3.canData_02 = canBytes[byteIndex++];\n                decoded.canId_3.canData_03 = canBytes[byteIndex++];\n                decoded.canId_3.canData_04 = canBytes[byteIndex++];\n                decoded.canId_3.canData_05 = canBytes[byteIndex++];\n                decoded.canId_3.canData_06 = canBytes[byteIndex++];\n                decoded.canId_3.canData_07 = canBytes[byteIndex++];\n                break;\n                \n            // canId 4\n            case \"3006\":      \n                decoded.canId_4 = {};\n                decoded.canId_4.id = canId;\n                decoded.canId_4.canData_00 = canBytes[byteIndex++];\n                decoded.canId_4.canData_01 = canBytes[byteIndex++];\n                decoded.canId_4.canData_02 = canBytes[byteIndex++];\n                decoded.canId_4.canData_03 = canBytes[byteIndex++];\n                decoded.canId_4.canData_04 = canBytes[byteIndex++];\n                decoded.canId_4.canData_05 = canBytes[byteIndex++];\n                decoded.canId_4.canData_06 = canBytes[byteIndex++];\n                decoded.canId_4.canData_07 = canBytes[byteIndex++];\n                break;\n                \n            // canId 5\n            case \"1F864\":     \n                decoded.canId_5 = {};\n                decoded.canId_5.id = canId;\n                decoded.canId_5.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_5.canData_01 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_5.canData_02 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_5.canData_03 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                break;\n                \n            // canId 6\n            case \"12065\":       \n                decoded.canId_6 = {};\n                decoded.canId_6.id = canId;\n                decoded.canId_6.canData_00 = canBytes[byteIndex++];\n                decoded.canId_6.canData_01 = canBytes[byteIndex++];\n                decoded.canId_6.canData_02 = canBytes[byteIndex++];\n                decoded.canId_6.canData_03 = canBytes[byteIndex++];\n                decoded.canId_6.canData_04 = canBytes[byteIndex++];\n                decoded.canId_6.canData_05 = canBytes[byteIndex++];\n                decoded.canId_6.canData_06 = canBytes[byteIndex++];\n                decoded.canId_6.canData_07 = canBytes[byteIndex++];\n                break;\n                \n            \n            // canId 7\n            case \"2F878\":      \n                decoded.canId_7 = {};\n                decoded.canId_7.id = canId;\n                decoded.canId_7.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_7.canData_01 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_7.canData_02 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_7.canData_03 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                break;\n            \n            // canId 8\n            case \"22079\":\n                decoded.canId_8 = {};\n                decoded.canId_8.id = canId;\n                decoded.canId_8.canData_00 = canBytes[byteIndex++];\n                decoded.canId_8.canData_01 = canBytes[byteIndex++];\n                decoded.canId_8.canData_02 = canBytes[byteIndex++];\n                decoded.canId_8.canData_03 = canBytes[byteIndex++];\n                decoded.canId_8.canData_04 = canBytes[byteIndex++];\n                decoded.canId_8.canData_05 = canBytes[byteIndex++];\n                decoded.canId_8.canData_06 = canBytes[byteIndex++];\n                decoded.canId_8.canData_07 = canBytes[byteIndex++];\n                break;\n        \n        \n            // canId 9\n            case \"3F88C\":      \n                decoded.canId_9 = {};\n                decoded.canId_9.id = canId;\n                decoded.canId_9.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_9.canData_01 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_9.canData_02 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_9.canData_03 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                break;        // canId 10\n            case \"3208D\": \n                decoded.canId_10 = {};\n                decoded.canId_10.id = canId;\n                decoded.canId_10.canData_00 = canBytes[byteIndex++];\n                decoded.canId_10.canData_01 = canBytes[byteIndex++];\n                decoded.canId_10.canData_02 = canBytes[byteIndex++];\n                decoded.canId_10.canData_03 = canBytes[byteIndex++];\n                decoded.canId_10.canData_04 = canBytes[byteIndex++];\n                decoded.canId_10.canData_05 = canBytes[byteIndex++];\n                decoded.canId_10.canData_06 = canBytes[byteIndex++];\n                decoded.canId_10.canData_07 = canBytes[byteIndex++];\n                break;\n                \n            // canId 11\n            case \"4F8A0\":     \n                decoded.canId_11 = {};\n                decoded.canId_11.id = canId;\n                decoded.canId_11.canData_00 = canBytes[byteIndex++];\n                decoded.canId_11.canData_01 = canBytes[byteIndex++];\n                decoded.canId_11.canData_02 = canBytes[byteIndex++];\n                decoded.canId_11.canData_03 = canBytes[byteIndex++];\n                decoded.canId_11.canData_04 = canBytes[byteIndex++];\n                decoded.canId_11.canData_05 = canBytes[byteIndex++];\n                decoded.canId_11.canData_06 = canBytes[byteIndex++];\n                decoded.canId_11.canData_07 = canBytes[byteIndex++];\n               break;         // canId 12\n            case \"400A1\":     \n                decoded.canId_12 = {};\n                decoded.canId_12.id = canId;\n                decoded.canId_12.canData_00 = canBytes[byteIndex++];\n                decoded.canId_12.canData_01 = canBytes[byteIndex++];\n                decoded.canId_12.canData_02 = canBytes[byteIndex++];\n                decoded.canId_12.canData_03 = canBytes[byteIndex++];\n                decoded.canId_12.canData_04 = canBytes[byteIndex++];\n                decoded.canId_12.canData_05 = canBytes[byteIndex++];\n                decoded.canId_12.canData_06 = canBytes[byteIndex++];\n                decoded.canId_12.canData_07 = canBytes[byteIndex++];\n                break;\n                \n            // canId 13\n            case \"408A2\":        \n                decoded.canId_13 = {};\n                decoded.canId_13.id = canId;\n                decoded.canId_13.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_13.canData_01 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_13.canData_02 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_13.canData_03 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n\n                break;\n                \n            // canId 14\n            case \"410A3\":        \n                decoded.canId_14 = {};\n                decoded.canId_14.id = canId;\n                decoded.canId_14.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_14.canData_01 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_14.canData_02 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_14.canData_03 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                break;\n            // canId 15\n            case \"430A4\":        \n                decoded.canId_15 = {};\n                decoded.canId_15.id = canId;\n                decoded.canId_15.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_15.canData_01 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_15.canData_02 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_15.canData_03 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                break;\n            // canId 16\n            case \"5F8B4\":        \n                decoded.canId_16 = {};\n                decoded.canId_16.id = canId;\n                decoded.canId_16.canData_00 = canBytes[byteIndex++];\n                decoded.canId_16.canData_01 = canBytes[byteIndex++];\n                decoded.canId_16.canData_02 = canBytes[byteIndex++];\n                decoded.canId_16.canData_03 = canBytes[byteIndex++];\n                decoded.canId_16.canData_04 = canBytes[byteIndex++];\n                decoded.canId_16.canData_05 = canBytes[byteIndex++];\n                decoded.canId_16.canData_06 = canBytes[byteIndex++];\n                decoded.canId_16.canData_07 = canBytes[byteIndex++];\n                break;\n            // canId 17\n            case \"500B5\":        \n                decoded.canId_17 = {};\n                decoded.canId_17.id = canId;\n                decoded.canId_17.canData_00 = canBytes[byteIndex++];\n                decoded.canId_17.canData_01 = canBytes[byteIndex++];\n                decoded.canId_17.canData_02 = canBytes[byteIndex++];\n                decoded.canId_17.canData_03 = canBytes[byteIndex++];\n                decoded.canId_17.canData_04 = canBytes[byteIndex++];\n                decoded.canId_17.canData_05 = canBytes[byteIndex++];\n                decoded.canId_17.canData_06 = canBytes[byteIndex++];\n                decoded.canId_17.canData_07 = canBytes[byteIndex++];\n                break;\n            // canId 18\n            case \"520B6\":        \n                decoded.canId_18 = {};\n                decoded.canId_18.id = canId;\n                decoded.canId_18.canData_00 = canBytes[byteIndex++];\n                decoded.canId_18.canData_01 = canBytes[byteIndex++];\n                decoded.canId_18.canData_02 = canBytes[byteIndex++];\n                decoded.canId_18.canData_03 = canBytes[byteIndex++];\n                decoded.canId_18.canData_04 = canBytes[byteIndex++];\n                decoded.canId_18.canData_05 = canBytes[byteIndex++];\n                decoded.canId_18.canData_06 = canBytes[byteIndex++];\n                decoded.canId_18.canData_07 = canBytes[byteIndex++];\n                break;\n            case \"6F8C8\":        \n                decoded.canId_19 = {};\n                decoded.canId_19.id = canId;\n                decoded.canId_19.canData_00 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_19.canData_01 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_19.canData_02 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_19.canData_03 = canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                break;            \n            case \"600C9\":        \n                decoded.canId_20 = {};\n                decoded.canId_20.id = canId;\n                decoded.canId_20.canData_00 = canBytes[byteIndex++];\n                decoded.canId_20.canData_01 = canBytes[byteIndex++];\n                decoded.canId_20.canData_02 = canBytes[byteIndex++];\n                decoded.canId_20.canData_03 = canBytes[byteIndex++];\n                decoded.canId_20.canData_04 = canBytes[byteIndex++];\n                decoded.canId_20.canData_05 = canBytes[byteIndex++];\n                decoded.canId_20.canData_06 = canBytes[byteIndex++];\n                decoded.canId_20.canData_07 = canBytes[byteIndex++];\n                break;            \n            case \"600CA\":        \n                decoded.canId_21 = {};\n                decoded.canId_21.id = canId;\n                decoded.canId_21.canData_00 = canBytes[byteIndex++];\n                decoded.canId_21.canData_01 = canBytes[byteIndex++];\n                decoded.canId_21.canData_02 = canBytes[byteIndex++];\n                decoded.canId_21.canData_03 = canBytes[byteIndex++];\n                decoded.canId_21.canData_04 = canBytes[byteIndex++];\n                decoded.canId_21.canData_05 = canBytes[byteIndex++];\n                decoded.canId_21.canData_06 = canBytes[byteIndex++];\n                decoded.canId_21.canData_07 = canBytes[byteIndex++];\n                break;        \n            \n            case \"600CB\":        \n                decoded.canId_22 = {};\n                decoded.canId_22.id = canId;\n                decoded.canId_22.canData_00 = canBytes[byteIndex++];\n                decoded.canId_22.canData_01 = canBytes[byteIndex++];\n                decoded.canId_22.canData_02 = canBytes[byteIndex++];\n                decoded.canId_22.canData_03 = canBytes[byteIndex++];\n                decoded.canId_22.canData_04 = canBytes[byteIndex++];\n                decoded.canId_22.canData_05 = canBytes[byteIndex++];\n                decoded.canId_22.canData_06 = canBytes[byteIndex++];\n                decoded.canId_22.canData_07 = canBytes[byteIndex++];\n                break;        \n            \n            case \"600CC\":        \n                decoded.canId_23 = {};\n                decoded.canId_23.id = canId;\n                decoded.canId_23.canData_00 = canBytes[byteIndex++];\n                decoded.canId_23.canData_01 = canBytes[byteIndex++];\n                decoded.canId_23.canData_02 = canBytes[byteIndex++];\n                decoded.canId_23.canData_03 = canBytes[byteIndex++];\n                decoded.canId_23.canData_04 = canBytes[byteIndex++];\n                decoded.canId_23.canData_05 = canBytes[byteIndex++];\n                decoded.canId_23.canData_06 = canBytes[byteIndex++];\n                decoded.canId_23.canData_07 = canBytes[byteIndex++];\n                break;        \n            \n            case \"600CD\":        \n                decoded.canId_24 = {};\n                decoded.canId_24.id = canId;\n                decoded.canId_24.canData_00 = canBytes[byteIndex++];\n                decoded.canId_24.canData_01 = canBytes[byteIndex++];\n                decoded.canId_24.canData_02 = canBytes[byteIndex++];\n                decoded.canId_24.canData_03 = canBytes[byteIndex++];\n                decoded.canId_24.canData_04 = canBytes[byteIndex++];\n                decoded.canId_24.canData_05 = canBytes[byteIndex++];\n                decoded.canId_24.canData_06 = canBytes[byteIndex++];\n                decoded.canId_24.canData_07 = canBytes[byteIndex++];\n                break;        \n            \n            case \"600CE\":        \n                decoded.canId_25 = {};\n                decoded.canId_25.id = canId;\n                decoded.canId_25.canData_00 = canBytes[byteIndex++];\n                decoded.canId_25.canData_01 = canBytes[byteIndex++];\n                decoded.canId_25.canData_02 = canBytes[byteIndex++];\n                decoded.canId_25.canData_03 = canBytes[byteIndex++];\n                decoded.canId_25.canData_04 = canBytes[byteIndex++];\n                decoded.canId_25.canData_05 = canBytes[byteIndex++];\n                decoded.canId_25.canData_06 = canBytes[byteIndex++];\n                decoded.canId_25.canData_07 = canBytes[byteIndex++];\n                break;  \n            case \"600CF\":        \n                decoded.canId_26 = {};\n                decoded.canId_26.id = canId;\n                decoded.canId_26.canData_00 = canBytes[byteIndex++];\n                decoded.canId_26.canData_01 = canBytes[byteIndex++];\n                decoded.canId_26.canData_02 = canBytes[byteIndex++];\n                decoded.canId_26.canData_03 = canBytes[byteIndex++];\n                decoded.canId_26.canData_04 = canBytes[byteIndex++];\n                decoded.canId_26.canData_05 = canBytes[byteIndex++];\n                decoded.canId_26.canData_06 = canBytes[byteIndex++];\n                decoded.canId_26.canData_07 = canBytes[byteIndex++];\n                break;        \n            \n            case \"600D0\":        \n                decoded.canId_27 = {};\n                decoded.canId_27.id = canId;\n                decoded.canId_27.canData_00 = canBytes[byteIndex++];\n                decoded.canId_27.canData_01 = canBytes[byteIndex++];\n                decoded.canId_27.canData_02 = canBytes[byteIndex++];\n                decoded.canId_27.canData_03 = canBytes[byteIndex++];\n                decoded.canId_27.canData_04 = canBytes[byteIndex++];\n                decoded.canId_27.canData_05 = canBytes[byteIndex++];\n                decoded.canId_27.canData_06 = canBytes[byteIndex++];\n                decoded.canId_27.canData_07 = canBytes[byteIndex++];\n                break;                \n            case \"600D1\":        \n                decoded.canId_28 = {};\n                decoded.canId_28.id = canId;\n                decoded.canId_28.canData_00 = canBytes[byteIndex++];\n                decoded.canId_28.canData_01 = canBytes[byteIndex++];\n                decoded.canId_28.canData_02 = canBytes[byteIndex++];\n                decoded.canId_28.canData_03 = canBytes[byteIndex++];\n                decoded.canId_28.canData_04 = canBytes[byteIndex++];\n                decoded.canId_28.canData_05 = canBytes[byteIndex++];\n                decoded.canId_28.canData_06 = canBytes[byteIndex++];\n                decoded.canId_28.canData_07 = canBytes[byteIndex++];\n                break;        \n            \n            case \"600D2\":        \n                decoded.canId_29 = {};\n                decoded.canId_29.id = canId;\n                decoded.canId_29.canData_00 = canBytes[byteIndex++];\n                decoded.canId_29.canData_01 = canBytes[byteIndex++];\n                decoded.canId_29.canData_02 = canBytes[byteIndex++];\n                decoded.canId_29.canData_03 = canBytes[byteIndex++];\n                decoded.canId_29.canData_04 = canBytes[byteIndex++];\n                decoded.canId_29.canData_05 = canBytes[byteIndex++];\n                decoded.canId_29.canData_06 = canBytes[byteIndex++];\n                decoded.canId_29.canData_07 = canBytes[byteIndex++];\n                break;                \n            case \"3808\":        \n                decoded.canId_30 = {};\n                decoded.canId_30.id = canId;\n                decoded.canId_30.canData_00 = canBytes[byteIndex++]<<24 |  canBytes[byteIndex++]<<16 | canBytes[byteIndex++]<<8 | canBytes[byteIndex++];\n                decoded.canId_30.canData_01 = canBytes[byteIndex++]<< 8 |  canBytes[byteIndex++];\n                decoded.canId_30.canData_02 = canBytes[byteIndex++]<< 8 |  canBytes[byteIndex++];\n\n                break;        \n            \n        }\n    }\n    return decoded;\n}\n\nconst RE = /\\{\\s*([0-9A-Fa-f]{1,8})[:\\s]\\s*((?:[0-9A-Fa-f]{2}\\s*){8})\\}/;\nconst DEV = \"0005168000136ee4\";\nlet linha = Buffer.isBuffer(msg.payload) ? msg.payload.toString('latin1') : String(msg.payload);\nlinha = linha.replace(/[\\r\\n]+$/, '').trim();\nif (!linha) return null;\nif (!global.get(\"msg_anterior_cubesat\")) {\n    global.set(\"msg_anterior_cubesat\", {decodedData: {}, lista: []});\n}\nconst m = linha.match(RE);\nif (!m) {\n    if (!/[A-Za-z]{3}/.test(linha)) return null;      // ruído / linha cortada\n    return [null, {payload: linha, props: {devEui: DEV, port: 251}}];\n}\nconst id = m[1].replace(/^0+(?=.)/, '').toUpperCase();   // 0001F864 -> 1F864\nconst hex = m[2].replace(/\\s+/g, '').toUpperCase();\nlet dec;\ntry { dec = CUBESATProtocolParser(JSON.stringify([id + \":\" + hex])); }\ncatch (e) { return null; }\nif (!Object.keys(dec).length) return null;               // ID que o painel não usa\n// mesma leitura do dashboard Python:\n// 1F864: os 4 campos int16 big-endian com sinal;\n// 408A2: Setpoint_atitude sem sinal (0 a 359°); Esforço PID, Azimute satelital\n//        (posição atual, -180 a +180°) e velocidade angular (°/s) com sinal\nconst COM_SINAL = {canId_5: [\"canData_00\", \"canData_01\", \"canData_02\", \"canData_03\"],\n                   canId_13: [\"canData_01\", \"canData_02\", \"canData_03\"]};\nfor (const [k, campos] of Object.entries(COM_SINAL)) {\n    if (!dec[k]) continue;\n    for (const c of campos) {\n        if (dec[k][c] >= 0x8000) dec[k][c] -= 0x10000;\n    }\n}\nreturn [{payload: linha, decodedData: dec, props: {devEui: DEV, port: 250}}, null];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "x": 2440,
+  "y": 1360,
+  "wires": [
+   [
+    "7b7fe6b5.d40108"
+   ],
+   [
+    "b9c4ef96.18bc7",
+    "cubesat.ritmo.atualizado"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.ritmo.atualizado",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "no máx. 1/s",
+  "func": "const PERIODO = 1000;\ncontext.set('ultima', msg);\nif (!context.get('timer')) {\n    const tick = () => {\n        const u = context.get('ultima');\n        if (u) {\n            context.set('ultima', null);\n            node.send(u);\n            context.set('timer', setTimeout(tick, PERIODO));\n        } else {\n            context.set('timer', null);\n        }\n    };\n    tick();\n}\nreturn null;\n",
+  "finalize": "clearTimeout(context.get('timer'));\ncontext.set('timer', null);\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 2700,
+  "y": 1400,
+  "wires": [
+   [
+    "cdfa4ebd.ddb6f8"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.ritmo.tela",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "no máx. 1 a cada 2 s",
+  "func": "const PERIODO = 2000;\ncontext.set('ultima', msg);\nif (!context.get('timer')) {\n    const tick = () => {\n        const u = context.get('ultima');\n        if (u) {\n            context.set('ultima', null);\n            node.send(u);\n            context.set('timer', setTimeout(tick, PERIODO));\n        } else {\n            context.set('timer', null);\n        }\n    };\n    tick();\n}\nreturn null;\n",
+  "finalize": "clearTimeout(context.get('timer'));\ncontext.set('timer', null);\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 2700,
+  "y": 1440,
+  "wires": [
+   [
+    "430037d3.c11ee8",
+    "eea48516.e6435",
+    "f1cf6f7f.e0314"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.estado",
+  "type": "status",
+  "z": "9b6df1cc.293a",
+  "name": "estado da serial",
+  "scope": [
+   "cubesat.serial.in"
+  ],
+  "x": 2180,
+  "y": 1500,
+  "wires": [
+   [
+    "cubesat.estado.fmt"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.estado.fmt",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "estado em português",
+  "func": "// Estado da serial do LoRa, em português, para o painel.\nconst s = msg.status || {};\nif (s.fill === 'green') msg.payload = 'conectado';\nelse if (s.fill === 'red') msg.payload = 'desconectado — conecte o USB';\nelse msg.payload = s.text || '—';\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 2420,
+  "y": 1500,
+  "wires": [
+   [
+    "cubesat.txt.radio"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.txt.radio",
+  "type": "ui_text",
+  "z": "9b6df1cc.293a",
+  "group": "cubesat.grp.radio",
+  "order": 1,
+  "width": "5",
+  "height": "1",
+  "name": "",
+  "label": "Rádio",
+  "format": "{{msg.payload}}",
+  "layout": "row-spread",
+  "className": "",
+  "style": false,
+  "x": 2640,
+  "y": 1500,
+  "wires": []
+ },
+ {
+  "id": "cubesat.comentario",
+  "type": "comment",
+  "z": "9b6df1cc.293a",
+  "name": "LoRa pela serial FTDI (/dev/ttyUSB0, 115200) — gerado por gerar_fluxo_rasp.py",
+  "info": "Comandos dos botões saem pela serial; linhas recebidas são decodificadas para o painel e repassadas ao dashboard Python pela porta TCP 5555.",
+  "x": 2300,
+  "y": 1120,
+  "wires": []
+ }
+]

@@ -1,5 +1,6 @@
 import argparse
 import collections
+import math
 import queue
 import sys
 import threading
@@ -17,7 +18,7 @@ from can_parser import decode, parse_line, to_int16
 CHARTS = [
     dict(
         title="Velocidades da roda de reação",
-        y=(-2000, 2000, 500),
+        y=(-3000, 3000, 500),
         signed=True,
         legend_cols=2,
         series=[
@@ -29,7 +30,7 @@ CHARTS = [
     ),
     dict(
         title="Painéis solares e atitude",
-        y=(0, 400, 50),
+        y=(-400, 400, 50),
         signed=False,
         legend_cols=3,
         series=[
@@ -64,6 +65,7 @@ else:
     FONT, MONO = "DejaVu Sans", "DejaVu Sans Mono"
 
 FTDI_VID = 0x0403   # adaptador USB-serial do receptor LoRa (FT231X)
+FRAME_MS = 40       # intervalo entre quadros da tela (40 ms = 25 quadros/s)
 
 
 def choose_port(ports):
@@ -119,7 +121,7 @@ class XYChart(tk.Frame):
 
     ML, MR, MT, MB = 62, 16, 12, 30   # margens do gráfico (px)
 
-    def __init__(self, master, cfg, window_s):
+    def __init__(self, master, cfg, window_s, compact=False):
         super().__init__(master, bg=PANEL)
         self.window_s = window_s
         self.y_min, self.y_max, self.y_step = cfg["y"]
@@ -127,31 +129,84 @@ class XYChart(tk.Frame):
         self.series = []   # dicts: can_id, field, color, hist, value_lbl
         legend = tk.Frame(self, bg=PANEL)
         legend.pack(fill="x", pady=(8, 6))
-        ncols = cfg["legend_cols"]
+        ncols = min(cfg["legend_cols"], 2) if compact else cfg["legend_cols"]
+        value_font = (MONO, 9 if compact else 12, "bold")
         for i, (can_id, field, label, color) in enumerate(cfg["series"]):
             row = tk.Frame(legend, bg=PANEL)
             row.grid(row=i // ncols, column=i % ncols, sticky="w",
-                     padx=(0, 18), pady=1)
+                     padx=(0, 8 if compact else 18), pady=1)
             tk.Frame(row, bg=color, width=14, height=4).pack(side="left", padx=(0, 6))
             tk.Label(row, text=label, bg=PANEL, fg=MUTED,
-                     font=(FONT, 9)).pack(side="left")
+                     font=(FONT, 8 if compact else 9)).pack(side="left")
             # largura fixa (6 caracteres cabem qualquer int16/uint16):
             # o texto muda, mas a legenda não se mexe
             val = tk.Label(row, text="—", bg=PANEL, fg=TEXT, width=6, anchor="e",
-                           font=(MONO, 12, "bold"))
-            val.pack(side="left", padx=(8, 0))
+                           font=value_font)
+            val.pack(side="left", padx=(2 if compact else 8, 0))
             self.series.append(dict(can_id=can_id, field=field, color=color,
-                                    hist=collections.deque(), value_lbl=val))
+                                    hist=collections.deque(), value_lbl=val,
+                                    shown="—", line=None, dot=None))
         self.canvas = tk.Canvas(self, bg=TILE, highlightthickness=1,
                                 highlightbackground=BORDER)
         self.canvas.pack(fill="both", expand=True)
+        self._box = None                      # (x0, x1, y0, y1) da área de plotagem
+        self.canvas.bind("<Configure>", self._layout)
+
+    def _layout(self, event=None):
+        """Desenha grade e eixos (fixos) e cria uma linha + ponto por série.
+        Só roda quando o canvas muda de tamanho; a cada quadro, redraw() apenas
+        move as linhas existentes."""
+        c = self.canvas
+        w, h = c.winfo_width(), c.winfo_height()
+        x0, x1 = self.ML, w - self.MR
+        y0, y1 = self.MT, h - self.MB          # y0 = topo (y_max), y1 = base (y_min)
+        c.delete("all")
+        if x1 <= x0 or y1 <= y0:
+            self._box = None
+            return
+        self._box = (x0, x1, y0, y1)
+        lo, hi = self.y_min, self.y_max
+
+        # grade e eixo y; em tela baixa, rotula só uma linha a cada k
+        # (sempre incluindo o 0) para os números não se sobreporem
+        px_por_passo = (y1 - y0) * self.y_step / (hi - lo)
+        k = max(1, math.ceil(16 / px_por_passo))
+        for v in range(lo, hi + 1, self.y_step):
+            y = y1 - (v - lo) / (hi - lo) * (y1 - y0)
+            strong = v in (lo, hi) or (v == 0 and lo < 0)
+            c.create_line(x0, y, x1, y, fill=MUTED if v == 0 and lo < 0 else BORDER,
+                          dash=() if strong else (2, 4))
+            if (v // self.y_step) % k:
+                continue
+            txt = f"{v:+d}" if (lo < 0 and v) else f"{v}"
+            c.create_text(x0 - 8, y, text=txt, anchor="e", fill=MUTED, font=(MONO, 9))
+        # grade e eixo x (segundos atrás: posições fixas na tela)
+        step = max(1, self.window_s // 6)
+        for s_ago in range(0, self.window_s + 1, step):
+            x = x1 - s_ago / self.window_s * (x1 - x0)
+            c.create_line(x, y0, x, y1, fill=BORDER, dash=(2, 4))
+            c.create_text(x, y1 + 6, text=f"-{s_ago} s" if s_ago else "agora",
+                          anchor="ne" if s_ago == 0 else "n",
+                          fill=MUTED, font=(MONO, 9))
+        c.create_rectangle(x0, y0, x1, y1, outline=BORDER)
+
+        # séries: linhas primeiro, pontos depois (pontos ficam por cima)
+        for s in self.series:
+            s["line"] = c.create_line(0, 0, 0, 0, fill=s["color"], width=2,
+                                      state="hidden")
+        for s in self.series:
+            s["dot"] = c.create_oval(0, 0, 0, 0, fill=s["color"], outline="",
+                                     state="hidden")
 
     def clear(self):
         """Apaga o histórico de todas as séries deste gráfico."""
         for s in self.series:
             s["hist"].clear()
+            s["shown"] = "—"
             s["value_lbl"].config(text="—")
-        self.canvas.delete("all")
+            if s["line"] is not None:
+                self.canvas.itemconfigure(s["line"], state="hidden")
+                self.canvas.itemconfigure(s["dot"], state="hidden")
 
     def can_ids(self):
         return {s["can_id"] for s in self.series}
@@ -163,61 +218,46 @@ class XYChart(tk.Frame):
                 s["hist"].append((t, to_int16(v) if self.signed else v))
 
     def redraw(self, now):
-        c = self.canvas
-        c.delete("all")
-        w, h = c.winfo_width(), c.winfo_height()
-        x0, x1 = self.ML, w - self.MR
-        y0, y1 = self.MT, h - self.MB          # y0 = topo (y_max), y1 = base (y_min)
-        if x1 <= x0 or y1 <= y0:
+        """Move as linhas das séries para a posição atual (sem recriar nada)."""
+        if self._box is None:
             return
+        c = self.canvas
+        x0, x1, y0, y1 = self._box
         lo, hi = self.y_min, self.y_max
         cut = now - self.window_s
+        kx = (x1 - x0) / self.window_s
+        ky = (y1 - y0) / (hi - lo)
 
-        def px(t):
-            return x0 + (t - cut) / self.window_s * (x1 - x0)
-
-        def py(v):
-            v = max(lo, min(hi, v))           # fora da escala -> encosta na borda
-            return y1 - (v - lo) / (hi - lo) * (y1 - y0)
-
-        # grade e eixo y
-        for v in range(lo, hi + 1, self.y_step):
-            y = py(v)
-            strong = v in (lo, hi) or (v == 0 and lo < 0)
-            c.create_line(x0, y, x1, y, fill=MUTED if v == 0 and lo < 0 else BORDER,
-                          dash=() if strong else (2, 4))
-            txt = f"{v:+d}" if (lo < 0 and v) else f"{v}"
-            c.create_text(x0 - 8, y, text=txt, anchor="e", fill=MUTED, font=(MONO, 9))
-        # grade e eixo x (segundos atrás)
-        step = max(1, self.window_s // 6)
-        for s_ago in range(0, self.window_s + 1, step):
-            x = px(now - s_ago)
-            c.create_line(x, y0, x, y1, fill=BORDER, dash=(2, 4))
-            c.create_text(x, y1 + 6, text=f"-{s_ago} s" if s_ago else "agora",
-                          anchor="ne" if s_ago == 0 else "n",
-                          fill=MUTED, font=(MONO, 9))
-        c.create_rectangle(x0, y0, x1, y1, outline=BORDER)
-
-        # séries
         for s in self.series:
             hist = s["hist"]
             while hist and hist[0][0] < cut:
                 hist.popleft()
             if not hist:
+                c.itemconfigure(s["line"], state="hidden")
+                c.itemconfigure(s["dot"], state="hidden")
                 continue
             pts = []
             for t, v in hist:
-                pts += [px(t), py(v)]
-            if len(pts) >= 4:
-                c.create_line(*pts, fill=s["color"], width=2)
-            c.create_oval(pts[-2] - 3, pts[-1] - 3, pts[-2] + 3, pts[-1] + 3,
-                          fill=s["color"], outline="")
-            s["value_lbl"].config(text=f"{hist[-1][1]}")
+                v = lo if v < lo else hi if v > hi else v   # fora da escala -> borda
+                pts.append(x0 + (t - cut) * kx)
+                pts.append(y1 - (v - lo) * ky)
+            if len(hist) >= 2:
+                c.coords(s["line"], pts)
+                c.itemconfigure(s["line"], state="normal")
+            else:
+                c.itemconfigure(s["line"], state="hidden")
+            px, py = pts[-2], pts[-1]
+            c.coords(s["dot"], px - 3, py - 3, px + 3, py + 3)
+            c.itemconfigure(s["dot"], state="normal")
+            txt = f"{hist[-1][1]}"
+            if txt != s["shown"]:                 # só mexe no rótulo se mudou
+                s["shown"] = txt
+                s["value_lbl"].config(text=txt)
 
 
 # ----------------------------------------------------------------- app
 class App:
-    def __init__(self, root, port, baud, window_s):
+    def __init__(self, root, port, baud, window_s, fullscreen=False):
         self.root = root
         self.q = queue.Queue()
         self.reader = SerialReader(port, baud, self.q)
@@ -225,7 +265,12 @@ class App:
 
         root.title("CubeSat · Telemetria LoRa")
         root.configure(bg=BG)
-        root.geometry("1500x880")
+        if fullscreen:   # ocupa a tela toda (ex.: display do Raspberry, sem gerenciador de janelas)
+            root.geometry(f"{root.winfo_screenwidth()}x{root.winfo_screenheight()}+0+0")
+        else:
+            root.geometry("1500x880")
+        # tela pequena (ex.: display de 800x480 do Raspberry): legenda mais enxuta
+        compact = fullscreen and root.winfo_screenwidth() < 1200
 
         top = tk.Frame(root, bg=BG)
         top.pack(fill="x", padx=16, pady=(12, 4))
@@ -260,15 +305,15 @@ class App:
             btn.pack(side="right")
             tk.Label(p, text=sub, bg=PANEL, fg=MUTED, font=(FONT, 8),
                      anchor="w").pack(fill="x")
-            chart = XYChart(p, cfg, window_s)
+            chart = XYChart(p, cfg, window_s, compact)
             btn.config(command=chart.clear)
             chart.pack(fill="both", expand=True)
             self.charts.append(chart)
 
         root.protocol("WM_DELETE_WINDOW", self.close)
+        self._status_shown = None
         self.reader.start()
-        self.poll()
-        self.redraw()
+        self.tick()
 
     def poll(self):
         try:
@@ -283,15 +328,22 @@ class App:
                         chart.push(can_id, t, values)
         except queue.Empty:
             pass
-        self.root.after(50, self.poll)
 
     def redraw(self):
         now = time.time()
         for chart in self.charts:
             chart.redraw(now)
         text, color = self.reader.status
-        self.status.config(text=f"● {text} · {self.total} mensagens", fg=color)
-        self.root.after(250, self.redraw)
+        status = (f"● {text} · {self.total} mensagens", color)
+        if status != self._status_shown:
+            self._status_shown = status
+            self.status.config(text=status[0], fg=status[1])
+
+    def tick(self):
+        """Um quadro: lê o que chegou da serial e redesenha (FRAME_MS)."""
+        self.poll()
+        self.redraw()
+        self.root.after(FRAME_MS, self.tick)
 
     def close(self):
         self.reader.stop()
@@ -303,12 +355,14 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", default=None,
                     help="ex.: COM5 ou /dev/ttyUSB0 (padrão: detecta o receptor)")
-    ap.add_argument("--baud", type=int, default=9600)
+    ap.add_argument("--baud", type=int, default=115200)
     ap.add_argument("--janela", type=int, default=60,
                     help="segundos mostrados nos gráficos (padrão 60)")
+    ap.add_argument("--tela-cheia", action="store_true",
+                    help="janela do tamanho da tela (ex.: display do Raspberry)")
     a = ap.parse_args()
     root = tk.Tk()
-    App(root, a.port, a.baud, a.janela)
+    App(root, a.port, a.baud, a.janela, fullscreen=a.tela_cheia)
     root.mainloop()
 
 

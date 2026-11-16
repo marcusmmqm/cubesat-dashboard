@@ -5,8 +5,8 @@ real, dois gráficos lado a lado:
 
 | Gráfico | Séries | Eixo Y |
 |---|---|---|
-| **Velocidades da roda de reação** (esquerda) | MeasuredSpeed, RefSpeed (`1F864`) · RefSpeed Roda Reação, Esforço PID (`408A2`) | fixo, -2000 a +2000 (int16 com sinal) |
-| **Painéis solares e atitude** (direita) | v_solar_bottom, Yminus, Y, Xminus, X, top, vout (`520B6`, sem STATUS) · Azimute satélite, Vel. angular Azim. (`408A2`) | fixo, 0 a 400 |
+| **Velocidades da roda de reação** (esquerda) | MeasuredSpeed, RefSpeed (`1F864`) · RefSpeed Roda Reação, Esforço PID (`408A2`) | fixo, -3000 a +3000 (int16 com sinal) |
+| **Painéis solares e atitude** (direita) | v_solar_bottom, Yminus, Y, Xminus, X, top, vout (`520B6`, sem STATUS) · Azimute satélite, Vel. angular Azim. (`408A2`) | fixo, -400 a +400 |
 
 Cada gráfico mostra os últimos 60 s e tem um botão **Limpar**. A legenda mostra o
 valor mais recente de cada série.
@@ -15,7 +15,7 @@ valor mais recente de cada série.
 
 - Python 3.10+ com tkinter (já vem no instalador do Windows; no Ubuntu: `sudo apt install python3-tk`)
 - `pyserial`: `pip install -r requirements.txt`
-- Receptor LoRa ligado por USB (adaptador FTDI FT231X), 9600 baud
+- Receptor LoRa ligado por USB (adaptador FTDI FT231X), 115200 baud
 
 ## Uso
 
@@ -31,8 +31,9 @@ Opções:
 
 ```
 --port COM5          força a porta (ex.: COM5 no Windows, /dev/ttyUSB0 no Linux)
---baud 9600          velocidade da serial
+--baud 115200        velocidade da serial
 --janela 60          segundos mostrados nos gráficos
+--tela-cheia         janela do tamanho da tela (usado no Raspberry, tela 800x480)
 ```
 
 No Linux, o usuário precisa estar no grupo `dialout` para abrir a serial.
@@ -63,19 +64,19 @@ Observações:
 O receptor envia uma mensagem CAN por linha:
 
 ```
-{0001F864:86FF000000000000}
+{0001F864:FF86000000000000}
 ```
 
 (8 dígitos hex de ID, `:`, 8 bytes de dados). O formato antigo com espaços,
-`{0001F864 86 FF 00 00 00 00 00 00}`, também é aceito. Linhas com menos ou mais
+`{0001F864 FF 86 00 00 00 00 00 00}`, também é aceito. Linhas com menos ou mais
 de 8 bytes são descartadas.
 
 Decodificação usada (nomes dos campos conforme `mapaCAN2.png`):
 
 | ID | Campos | Formato |
 |---|---|---|
-| `1F864` | MeasuredSpeed, RefSpeed, Measured Current, RefTorque | 4 × int16 **little-endian** com sinal |
-| `408A2` | RefSpeed Roda Reação, Esforço PID, Azimute satélite, Vel. angular Azim. | 4 × uint16 big-endian (no gráfico da esquerda convertidos para int16 com sinal) |
+| `1F864` | MeasuredSpeed, RefSpeed, Measured Current, RefTorque | 4 × int16 big-endian com sinal |
+| `408A2` | RefSpeed Roda Reação, Esforço PID, Azimute satélite, Vel. angular Azim. | 4 × int16 big-endian com sinal |
 | `520B6` | v_solar_bottom, Yminus, Y, Xminus, X, top, vout, STATUS | 8 × uint8 |
 
 ![Mapa CAN](mapaCAN2.png)
@@ -100,12 +101,7 @@ python3 -m unittest
   os picos nos gráficos. A causa provável é um buffer compartilhado no firmware
   que monta os pacotes LoRa; a correção é um buffer por ID ou copiar ID + 8 bytes
   de forma atômica. `408A2` e `4F8A0` chegam limpos.
-- **Ordem dos bytes ainda não confirmada** para os campos que até agora só vieram
-  zerados (RefSpeed, Measured Current, RefTorque, Esforço PID, Vel. angular). O
-  little-endian do `1F864` foi confirmado só com o MeasuredSpeed (roda parada:
-  `7A00` → +122, `86FF` → -122). O codec do Node-RED lê `1F864` em big-endian, por
-  isso mostrava 31232.
-- **Sinal do Azimute e da Vel. angular**: tratados como sem sinal (0 a 400). Se
-  forem com sinal, valores negativos aparecem como ~65000 (presos no topo).
-- **Serial perto do limite**: ~9000 de 9600 bit/s. Se o tráfego aumentar, convém
-  subir a velocidade do receptor e usar `--baud`.
+- **Ordem dos bytes**: `1F864` e `408A2` são lidos como int16 big-endian com
+  sinal. Com o firmware antigo o `1F864` chegava em little-endian (roda parada:
+  `7A00` → +122); se aparecerem valores como 31232 com a roda parada, a ordem
+  voltou a ser little-endian.

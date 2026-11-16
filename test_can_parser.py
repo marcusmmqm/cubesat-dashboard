@@ -34,12 +34,11 @@ class ParseLineTest(unittest.TestCase):
 
 
 class DecodeTest(unittest.TestCase):
-    def test_1f864_int16_little_endian(self):
-        # Roda parada: ontem chegava 7A00..., hoje 86FF... -> +122 / -122.
-        # Em big-endian isso daria 31232 / -30977 (o que o Node-RED mostrava).
-        self.assertEqual(decode(0x1F864, bytes.fromhex("7A00000000000000"))["MeasuredSpeed"], 122)
-        self.assertEqual(decode(0x1F864, bytes.fromhex("86FF000000000000"))["MeasuredSpeed"], -122)
-        v = decode(0x1F864, bytes.fromhex("0100020003000000"))
+    def test_1f864_int16_big_endian(self):
+        self.assertEqual(decode(0x1F864, bytes.fromhex("007A000000000000"))["MeasuredSpeed"], 122)
+        self.assertEqual(decode(0x1F864, bytes.fromhex("FF86000000000000"))["MeasuredSpeed"], -122)
+        self.assertEqual(decode(0x1F864, bytes.fromhex("7A00000000000000"))["MeasuredSpeed"], 31232)
+        v = decode(0x1F864, bytes.fromhex("0001000200030000"))
         self.assertEqual(v["RefSpeed"], 2)
         self.assertEqual(v["Measured Current"], 3)
         self.assertEqual(v["RefTorque"], 0)
@@ -48,7 +47,7 @@ class DecodeTest(unittest.TestCase):
         v = decode(0x408A2, bytes.fromhex("00010002FF910004"))
         self.assertEqual(v["RefSpeed Roda Reação"], 1)
         self.assertEqual(v["Esforço PID"], 2)  # mapaCAN2.png
-        self.assertEqual(v["Azimute satélite"], 65425)  # valor da imagem
+        self.assertEqual(v["Azimute satélite"], -111)  # FF91 com sinal
         self.assertEqual(v["Vel. angular Azim."], 4)
 
     def test_520b6_um_byte_por_campo(self):

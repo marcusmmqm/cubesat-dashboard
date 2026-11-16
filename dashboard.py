@@ -2,6 +2,7 @@ import argparse
 import collections
 import math
 import queue
+import socket
 import sys
 import threading
 import time
@@ -113,6 +114,51 @@ class SerialReader(threading.Thread):
 
     def stop(self):
         self._stop.set()
+
+
+class TcpReader(threading.Thread):
+    """Recebe as linhas do LoRa repassadas pelo Node-RED (conexão TCP local) e
+    põe (t, can_id, data) na fila. Usado no Raspberry, onde o Node-RED é o dono
+    da serial (para também poder enviar comandos)."""
+
+    def __init__(self, host, port, out):
+        super().__init__(daemon=True)
+        self.host, self.port, self.out = host, port, out
+        self.status = ("conectando ao Node-RED…", WARN)
+        self._stop = threading.Event()
+
+    def run(self):
+        while not self._stop.is_set():
+            try:
+                with socket.create_connection((self.host, self.port), timeout=2) as s:
+                    s.settimeout(0.5)
+                    self.status = (f"via Node-RED ({self.host}:{self.port})", OK)
+                    buf = b""
+                    while not self._stop.is_set():
+                        try:
+                            chunk = s.recv(4096)
+                        except socket.timeout:
+                            continue
+                        if not chunk:
+                            raise ConnectionError("Node-RED fechou a conexão")
+                        buf += chunk
+                        *lines, buf = buf.split(b"\n")
+                        for line in lines:
+                            msg = parse_line(line)
+                            if msg:
+                                self.out.put((time.time(),) + msg)
+            except OSError as e:
+                self.status = (f"sem conexão com o Node-RED ({e}) — tentando de novo", ERR)
+                self._stop.wait(2.0)
+
+    def stop(self):
+        self._stop.set()
+
+
+def parse_hostport(text):
+    """'localhost:5555' -> ('localhost', 5555)."""
+    host, _, port = text.rpartition(":")
+    return host or "localhost", int(port)
 
 
 # ----------------------------------------------------------------- gráfico
@@ -257,10 +303,13 @@ class XYChart(tk.Frame):
 
 # ----------------------------------------------------------------- app
 class App:
-    def __init__(self, root, port, baud, window_s, fullscreen=False):
+    def __init__(self, root, port, baud, window_s, fullscreen=False, tcp=None):
         self.root = root
         self.q = queue.Queue()
-        self.reader = SerialReader(port, baud, self.q)
+        if tcp:
+            self.reader = TcpReader(*parse_hostport(tcp), self.q)
+        else:
+            self.reader = SerialReader(port, baud, self.q)
         self.total = 0
 
         root.title("CubeSat · Telemetria LoRa")
@@ -360,9 +409,12 @@ def main():
                     help="segundos mostrados nos gráficos (padrão 60)")
     ap.add_argument("--tela-cheia", action="store_true",
                     help="janela do tamanho da tela (ex.: display do Raspberry)")
+    ap.add_argument("--tcp", metavar="HOST:PORTA", default=None,
+                    help="recebe as linhas do Node-RED em vez de abrir a serial "
+                         "(no Raspberry: localhost:5555)")
     a = ap.parse_args()
     root = tk.Tk()
-    App(root, a.port, a.baud, a.janela, fullscreen=a.tela_cheia)
+    App(root, a.port, a.baud, a.janela, fullscreen=a.tela_cheia, tcp=a.tcp)
     root.mainloop()
 
 

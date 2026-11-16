@@ -34,7 +34,12 @@ Opções:
 --baud 115200        velocidade da serial
 --janela 60          segundos mostrados nos gráficos
 --tela-cheia         janela do tamanho da tela (usado no Raspberry, tela 800x480)
+--tcp HOST:PORTA     recebe as linhas do Node-RED em vez de abrir a serial
 ```
+
+No Raspberry o dashboard roda com `--tcp localhost:5555`: lá o Node-RED é quem
+abre a serial do LoRa (para também enviar comandos ao CubeSat) e repassa cada
+linha recebida ao dashboard por essa porta.
 
 No Linux, o usuário precisa estar no grupo `dialout` para abrir a serial.
 

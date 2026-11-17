@@ -73,7 +73,8 @@ DECODERS = {
     0x520B6: (
         # 4 × int16 big-endian com sinal: aux1 (bytes 0-1, antes v_solar_bottom e
         # v_solar_Yminus), aux2 (2-3, v_solar_Y e v_solar_Xminus), aux3 (4-5,
-        # v_solar_X e v_solar_top) e angulo (6-7, posição atual, -180 a +180°)
+        # v_solar_X e v_solar_top) e angulo (6-7, posição atual; o relógio leva
+        # qualquer valor para 0 a 359°)
         ["aux1", "aux2", "aux3", "angulo"],
         lambda d: _s16_be(d, 4),
     ),

@@ -13,11 +13,10 @@ real, dois painéis lado a lado:
   - ponteiro **vermelho, longo** = posição atual = **angulo do `520B6`** (o
     antigo Azimute satélite do `408A2` virou o campo "x", sem uso por enquanto);
   - mostrador de 30° em 30°, 360° no alto, sentido horário;
-  - legenda: setpoint e posição atual de 0 a 359° (a posição chega de -180 a
-    +180° e é convertida: -51 → 309°), velocidade angular (°/s, com sinal) e
-    diferença até o alvo pelo caminho mais curto (-180 a +180°);
-  - setpoint fora de 0–359 ou posição fora de -180–+180 aparece como
-    "inválido (N)" e não move o ponteiro;
+  - legenda: setpoint e posição atual de 0 a 359° (qualquer valor da posição
+    é convertido: -51 → 309°, 200 → 200°, 370 → 10°), velocidade angular
+    (°/s, com sinal) e diferença até o alvo pelo caminho mais curto (-180 a +180°);
+  - setpoint fora de 0–359 aparece como "inválido (N)" e não move o ponteiro;
   - cada ponteiro fica cinza quando o seu ID para de chegar por mais de 5 s
     (`408A2` → setpoint; `520B6` → posição), com o aviso "sem 408A2 há X s" /
     "sem 520B6 há X s".
@@ -107,7 +106,7 @@ Decodificação usada (nomes e ordem dos campos conforme o mapa CAN novo,
 |---|---|---|
 | `1F864` | MeasuredSpeed, RefSpeed, Measured Current, RefTorque | 4 × int16 big-endian com sinal |
 | `408A2` | Esforço PID, Setpoint_atitude, x (antigo Azimute satélite, sem uso), Vel. angular Azim. | 4 × 16 bits big-endian: Setpoint_atitude (bytes 2–3) sem sinal (0–359°); Esforço PID (bytes 0–1), x (bytes 4–5) e Vel. angular (°/s) com sinal |
-| `520B6` | aux1, aux2, aux3, angulo | 4 × int16 big-endian com sinal: aux1 = bytes 0–1 (antes v_solar_bottom e Yminus), aux2 = 2–3 (Y e Xminus), aux3 = 4–5 (X e top), angulo = 6–7 (posição atual, -180 a +180°) |
+| `520B6` | aux1, aux2, aux3, angulo | 4 × int16 big-endian com sinal: aux1 = bytes 0–1 (antes v_solar_bottom e Yminus), aux2 = 2–3 (Y e Xminus), aux3 = 4–5 (X e top), angulo = 6–7 (posição atual; qualquer valor vira 0–359°) |
 
 ![Mapa CAN](mapaCAN2.png)
 

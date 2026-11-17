@@ -1,9 +1,9 @@
 """Lógica do relógio de atitude (sem Tk): leitura dos CAN 408A2 e 520B6, validação
 dos ângulos, diferença angular e textos da legenda.
 
-Do 408A2 vêm o Setpoint_atitude (sem sinal, 0 a 359°) e a velocidade angular
-(°/s, com sinal). A posição atual vem do angulo do 520B6: com sinal, de -180 a
-+180°, mostrada de 0 a 359° (-51 -> 309). Fora dessas faixas o valor é inválido.
+Do 408A2 vêm o Setpoint_atitude (sem sinal, 0 a 359°; fora disso é inválido) e a
+velocidade angular (°/s, com sinal). A posição atual vem do angulo do 520B6 e
+qualquer valor é mostrado de 0 a 359° (-51 -> 309, 200 -> 200, 370 -> 10).
 """
 import math
 
@@ -22,8 +22,9 @@ def valid_angle(v):
 
 
 def position_deg(v):
-    """Posição atual (-180 a +180°, com sinal) em 0 a 359°; None se fora da faixa."""
-    if v is None or not -180 <= v <= 180:
+    """Posição atual em 0 a 359°. Aceita qualquer valor (com sinal ou acima de
+    180°): -51 -> 309, 200 -> 200, 370 -> 10. None só se não chegou nada."""
+    if v is None:
         return None
     return v % 360
 

@@ -66,14 +66,18 @@ class ClockPanelTest(unittest.TestCase):
         self.assertEqual(c.itemcget(p._current, "fill"), ERR)
         self.assertEqual(p._labels["stale"].cget("text"), "sem 408A2 há 6 s")
 
-    def test_sem_angulo_valido_ponteiro_oculto(self):
+    def test_angulo_acima_de_180_aparece(self):
         p, c = self.p, self.p.canvas
         p.push(0x408A2, 100.0, V408)
-        p.push(0x520B6, 100.0, dict(V520, angulo=-32768))
+        p.push(0x520B6, 100.0, dict(V520, angulo=270))
         p.redraw(100.5)
         self.root.update()
-        self.assertEqual(c.itemcget(p._current, "state"), "hidden")
-        self.assertEqual(c.itemcget(p._target, "state"), "normal")
+        cx, cy, _ = p._geom
+        px, py = c.coords(p._current)[2:]         # 270°: para a esquerda
+        self.assertEqual(c.itemcget(p._current, "state"), "normal")
+        self.assertLess(px, cx - 10)
+        self.assertAlmostEqual(py, cy, delta=1)
+        self.assertEqual(p._labels["position"].cget("text"), "270°")
 
     def test_clear(self):
         p = self.p

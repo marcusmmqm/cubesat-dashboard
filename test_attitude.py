@@ -10,13 +10,17 @@ class AngleTest(unittest.TestCase):
         self.assertFalse(valid_angle(360))
         self.assertFalse(valid_angle(65485))
 
-    def test_posicao_valida(self):           # posição atual: com sinal, -180 a +180
+    def test_posicao_qualquer_valor_vira_0_a_359(self):   # nunca inválida
         self.assertEqual(position_deg(-51), 309)
         self.assertEqual(position_deg(-180), 180)
         self.assertEqual(position_deg(180), 180)
+        self.assertEqual(position_deg(181), 181)        # passou de 180: continua valendo
+        self.assertEqual(position_deg(200), 200)
+        self.assertEqual(position_deg(359), 359)
+        self.assertEqual(position_deg(360), 0)
+        self.assertEqual(position_deg(370), 10)
         self.assertEqual(position_deg(0), 0)
-        self.assertIsNone(position_deg(181))
-        self.assertIsNone(position_deg(-32768))
+        self.assertIsNone(position_deg(None))
 
     def test_diff(self):
         self.assertEqual(angle_diff(350, 10), -20)   # caminho curto, não +340
@@ -67,13 +71,13 @@ class AttitudeTest(unittest.TestCase):
         a.update(0x1F864, 100.0, {"MeasuredSpeed": 5})
         self.assertEqual(a.legend(100.0)["setpoint"], "—")
 
-    def test_invalido_mantem_ultimo_valido(self):
+    def test_posicao_acima_de_180(self):
         a = self.cheio()
-        a.update(0x520B6, 101.0, dict(self.V520, angulo=-32768))
+        a.update(0x520B6, 101.0, dict(self.V520, angulo=200))
         leg = a.legend(101.0)
-        self.assertEqual(leg["position"], "inválido (-32768)")
-        self.assertEqual(leg["diff"], "—")
-        self.assertEqual(a.last_valid_position, 309)
+        self.assertEqual(leg["position"], "200°")
+        self.assertEqual(leg["diff"], "+175°")          # de 200° até 15°: +175
+        self.assertEqual(a.last_valid_position, 200)
 
     def test_velocidade_negativa(self):
         a = Attitude()

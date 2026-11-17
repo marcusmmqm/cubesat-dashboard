@@ -62,16 +62,20 @@ DECODERS = {
         lambda d: _s16_be(d, 4),
     ),
     0x408A2: (
-        ["Setpoint_atitude", "Esforço PID", "Azimute satélite", "Vel. angular Azim."],
-        # big-endian; Setpoint_atitude sem sinal (0 a 359°); Esforço PID,
-        # Azimute satélite (posição atual, -180 a +180°) e velocidade angular
-        # (°/s) com sinal
-        lambda d: [v if i == 0 else to_int16(v) for i, v in enumerate(_u16_be(d, 4))],
+        # ordem de NovoMapaCANParaAjusteCodigo.png (canId_13 no Node-RED)
+        ["Esforço PID", "Setpoint_atitude", "x", "Vel. angular Azim."],
+        # big-endian; Setpoint_atitude (campo 1) sem sinal (0 a 359°); Esforço PID,
+        # "x" e velocidade angular (°/s) com sinal.
+        # "x" (bytes 4-5) era o "Azimute satélite": não é mais usado (a posição
+        # atual do relógio vem do angulo do 520B6); o significado fica para depois
+        lambda d: [v if i == 1 else to_int16(v) for i, v in enumerate(_u16_be(d, 4))],
     ),
     0x520B6: (
-        ["v_solar_bottom", "v_solar_Yminus", "v_solar_Y", "v_solar_Xminus",
-         "v_solar_X", "v_solar_top", "v_solar_vout", "STATUS"],
-        lambda d: _u8(d, 8),
+        # 4 × int16 big-endian com sinal: aux1 (bytes 0-1, antes v_solar_bottom e
+        # v_solar_Yminus), aux2 (2-3, v_solar_Y e v_solar_Xminus), aux3 (4-5,
+        # v_solar_X e v_solar_top) e angulo (6-7, posição atual, -180 a +180°)
+        ["aux1", "aux2", "aux3", "angulo"],
+        lambda d: _s16_be(d, 4),
     ),
 }
 

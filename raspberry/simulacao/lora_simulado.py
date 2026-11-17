@@ -8,7 +8,8 @@ PD um pouco subamortecido (oscila antes de parar).
   LIGA ATITUDE (00 05 + azimute) -> novo setpoint e controle ligado;
   DESLIGA ATITUDE (00 04) -> controle desligado (gira solto, perdendo velocidade).
 - Sem comando recente, o setpoint muda sozinho a cada 45 s.
-- Uma vez a cada 2 min, o 408A2 some por 7 s (para ver "sem dados").
+- Uma vez a cada 2 min, o 408A2 some por 7 s (para ver "sem dados"); a posição
+  atual continua chegando pelo angulo do 520B6.
 
 Uso: python3 lora_simulado.py
 """
@@ -109,16 +110,19 @@ def main():
         medida += (ref - medida) * 0.15
 
         sem_atitude = (t % 120) >= 113    # 7 s sem 408A2 a cada 2 min
+        posicao = (theta + 180) % 360 - 180              # chega com sinal: -180 a +180
         if not sem_atitude:
-            posicao = (theta + 180) % 360 - 180          # chega com sinal: -180 a +180
-            frame(0x408A2, u16(setpoint) + u16(esforco) + u16(posicao) + u16(omega))
+            # ordem do mapa CAN novo: Esforço PID, Setpoint_atitude, "x" (antigo Azimute), Vel. angular
+            frame(0x408A2, u16(esforco) + u16(setpoint) + u16(posicao) + u16(omega))
+        # posição atual para o relógio: angulo do 520B6 (bytes 6-7), depois de aux1..3
+        frame(0x520B6, u16(1708) + u16(8) + u16(-7) + u16(posicao))
         frame(0x1F864, u16(medida) + u16(ref) + "0000" + "0000")
 
         # ---- resto da telemetria (tabela do Node-RED)
         if agora >= prox_outros:
             temp = 32 + int(3 * math.sin(t / 20))
             for can_id, h in [(0x5F8B4, f"003420470A2900{temp:02X}"),
-                              (0x520B6, "1708000808000700"), (0xF800, "000000000000008B"),
+                              (0xF800, "000000000000008B"),
                               (0x3006, "0000000000000000"), (0x4F8A0, "27000A017727FB5E"),
                               (0x6F8C8, "0000000000000000")]:
                 frame(can_id, h)

@@ -1,17 +1,20 @@
-"""Lógica do relógio de atitude (sem Tk): leitura do CAN 408A2, validação dos
-ângulos, diferença angular e textos da legenda.
+"""Lógica do relógio de atitude (sem Tk): leitura dos CAN 408A2 e 520B6, validação
+dos ângulos, diferença angular e textos da legenda.
 
-O Setpoint_atitude chega sem sinal, de 0 a 359°. A posição atual (Azimute
-satélite) chega com sinal, de -180 a +180°, e é mostrada de 0 a 359° (-51 -> 309).
-Fora dessas faixas o valor é inválido. A velocidade angular chega em °/s, com sinal.
+Do 408A2 vêm o Setpoint_atitude (sem sinal, 0 a 359°) e a velocidade angular
+(°/s, com sinal). A posição atual vem do angulo do 520B6: com sinal, de -180 a
++180°, mostrada de 0 a 359° (-51 -> 309). Fora dessas faixas o valor é inválido.
 """
 import math
 
-STALE_S = 5   # sem 408A2 por mais que isso: dado parado
+STALE_S = 5   # sem mensagem do ID por mais que isso: dado parado
+
+CAN_TARGET = 0x408A2      # setpoint e velocidade angular
+CAN_POSITION = 0x520B6    # posição atual (angulo)
 
 F_SETPOINT = "Setpoint_atitude"
-F_POSITION = "Azimute satélite"
 F_VELOCITY = "Vel. angular Azim."
+F_POSITION = "angulo"
 
 
 def valid_angle(v):
@@ -44,8 +47,12 @@ def _angle_text(raw, deg):
     return f"{deg}°" if deg is not None else f"inválido ({raw})"
 
 
+def _stale(last_t, now):
+    return last_t is not None and now - last_t > STALE_S
+
+
 class Attitude:
-    """Últimos valores recebidos do 408A2."""
+    """Últimos valores recebidos do 408A2 (alvo) e do 520B6 (posição)."""
 
     def __init__(self):
         self.clear()
@@ -53,20 +60,26 @@ class Attitude:
     def clear(self):
         self.setpoint = self.position = self.velocity = None   # últimos valores crus
         self.last_valid_setpoint = self.last_valid_position = None
-        self.last_t = None
+        self.t_target = self.t_position = None                # hora da última mensagem
 
-    def update(self, t, values):
-        self.last_t = t
-        self.setpoint = values[F_SETPOINT]
-        self.position = values[F_POSITION]
-        self.velocity = values[F_VELOCITY]
-        if valid_angle(self.setpoint):
-            self.last_valid_setpoint = self.setpoint
-        if position_deg(self.position) is not None:
-            self.last_valid_position = position_deg(self.position)
+    def update(self, can_id, t, values):
+        if can_id == CAN_TARGET:
+            self.t_target = t
+            self.setpoint = values[F_SETPOINT]
+            self.velocity = values[F_VELOCITY]
+            if valid_angle(self.setpoint):
+                self.last_valid_setpoint = self.setpoint
+        elif can_id == CAN_POSITION:
+            self.t_position = t
+            self.position = values[F_POSITION]
+            if position_deg(self.position) is not None:
+                self.last_valid_position = position_deg(self.position)
 
-    def is_stale(self, now):
-        return self.last_t is not None and now - self.last_t > STALE_S
+    def target_stale(self, now):
+        return _stale(self.t_target, now)
+
+    def position_stale(self, now):
+        return _stale(self.t_position, now)
 
     def legend(self, now):
         setpoint = self.setpoint if valid_angle(self.setpoint) else None
@@ -75,10 +88,13 @@ class Attitude:
             diff = f"{angle_diff(setpoint, position):+d}°"
         else:
             diff = "—"
+        parados = [f"sem {nome} há {int(now - t)} s"
+                   for nome, t in (("408A2", self.t_target), ("520B6", self.t_position))
+                   if _stale(t, now)]
         return {
             "setpoint": _angle_text(self.setpoint, setpoint),
             "position": _angle_text(self.position, position),
             "velocity": "—" if self.velocity is None else f"{self.velocity:+d} °/s",
             "diff": diff,
-            "stale": f"sem dados há {int(now - self.last_t)} s" if self.is_stale(now) else None,
+            "stale": " · ".join(parados) or None,
         }

@@ -71,7 +71,7 @@ LAYOUT = {
     ("ui_button", "DESLIGA ATITUDE"):    (4, 4, 1),
     ("ui_button", "ACIONA DEPLOYER"):    (5, 4, 1),
     ("ui_button", "DESLIGA DEPLOYER"):   (6, 4, 1),
-    ("ui_text_input", "SET AZIMUTE"):    (7, 4, 1),
+    ("ui_text_input", "Send Setpoint_atitude (int 0 a 359°)"): (7, 4, 1),
     ("ui_button", "Update"):             (8, 4, 1),
     ("ui_gauge", "V BATERIA"):           (9, 3, 3),
     ("ui_chart", "Volts"):               (10, 4, 3),
@@ -141,10 +141,11 @@ catch (e) { return null; }
 if (!Object.keys(dec).length) return null;               // ID que o painel não usa
 // mesma leitura do dashboard Python:
 // 1F864: os 4 campos int16 big-endian com sinal;
-// 408A2: Setpoint_atitude sem sinal (0 a 359°); Esforço PID, Azimute satelital
-//        (posição atual, -180 a +180°) e velocidade angular (°/s) com sinal
+// 408A2 (ordem do mapa CAN novo): Esforço PID (00), Setpoint_atitude (01) sem
+//        sinal (0 a 359°), Azimute satelital (02, -180 a +180°)
+//        e velocidade angular (03, °/s); os outros três com sinal
 const COM_SINAL = {canId_5: ["canData_00", "canData_01", "canData_02", "canData_03"],
-                   canId_13: ["canData_01", "canData_02", "canData_03"]};
+                   canId_13: ["canData_00", "canData_02", "canData_03"]};
 for (const [k, campos] of Object.entries(COM_SINAL)) {
     if (!dec[k]) continue;
     for (const c of campos) {
@@ -326,10 +327,12 @@ setInterval(function () {
     });
 }, 60000);
 </script>""", 1)
-    # 408A2: o campo 0 agora é o Setpoint_atitude (era "RefSpeed Roda Reação")
-    rot_antes = "RefSpeed Roda Reação: {{msg.decodedData.canId_13.canData_00}}"
-    assert rot_antes in f
-    f = f.replace(rot_antes, "Setpoint_atitude: {{msg.decodedData.canId_13.canData_00}}")
+    # o fluxo base já precisa ter a ordem nova do 408A2 e o "angulo" do 520B6
+    # (NovoMapaCANParaAjusteCodigo.png); com o fluxo antigo, pare aqui
+    for rotulo in ("Esforço PID: {{msg.decodedData.canId_13.canData_00}}",
+                   "Setpoint_atitude: {{msg.decodedData.canId_13.canData_01}}",
+                   "angulo: {{msg.decodedData.canId_18.canData_06}}"):
+        assert rotulo in f, f"fluxo base desatualizado: falta {rotulo!r}"
     tab["format"] = f
 
     # ---------------------------------------------------------- tela

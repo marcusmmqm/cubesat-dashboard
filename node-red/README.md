@@ -34,8 +34,13 @@ O `codec1.txt` (aba "Agro") é de outro projeto e não é carregado.
   "Mauasat online Compiled on ...") entram como a porta 251.
 - Mesma leitura do dashboard Python: `1F864` com sinal; no `408A2`,
   Setpoint_atitude **sem sinal** (0 a 359°); Esforço PID, Azimute satelital
-  (-180 a +180°) e Vel. angular Azim. (°/s) **com sinal**. O campo 0 do `408A2` aparece na
-  tabela como Setpoint_atitude (antes "RefSpeed Roda Reação").
+  (-180 a +180°) e Vel. angular Azim. (°/s) **com sinal**. Ordem do `408A2` no mapa
+  CAN novo: Esforço PID (bytes 0–1), Setpoint_atitude (2–3), Azimute (4–5),
+  Vel. angular (6–7).
+- **Diferença em relação ao dashboard Python:** a tabela do Node-RED ainda lê o
+  `520B6` byte a byte (6 painéis e "angulo" = só o byte 6). O dashboard lê
+  aux1, aux2, aux3 e angulo como 4 × int16 com sinal; um angulo negativo
+  (ex. -51 = `FF CD`) aparece na tabela do Node-RED como 255.
 
 ## Comandos enviados (para o firmware)
 
@@ -56,7 +61,7 @@ enviado depois de **Update** + PIN correto (PIN errado não envia nada):
 | DESLIGA ATITUDE | `AAQ=` | `00 04` |
 | LIGA ATITUDE | ex. `AAUBLA==` | `00 05` + azimute (uint16 big-endian; 300 → `01 2C`) |
 
-O azimute vem do campo **SET AZIMUTE** (digitar e apertar Enter no teclado da
+O azimute vem do campo **Send Setpoint_atitude (int 0 a 359°)** (digitar e apertar Enter no teclado da
 tela). Sem azimute definido, LIGA ATITUDE sai só com `00 05`.
 
 (`confirmed` e `fPort` vêm do formato do ChirpStack e são sempre `true` e `1`.)
@@ -67,7 +72,7 @@ Segue as imagens de referência do painel antigo (`ParaSerVisualizado1.png` e
 `ParaSerVisualizado2.png`, não incluídas) e `NodeREDAtualizado.png`:
 
 1. **ultimo envio** (s desde o último comando) e **atualizado a** (s desde a
-   última mensagem recebida do CubeSat); botões, SET AZIMUTE e Update.
+   última mensagem recebida do CubeSat); botões, Send Setpoint_atitude e Update.
 2. **V BATERIA** e **Temperatura** (EPS `5F8B4`) com gráficos das últimas 2 h;
    mensagem de texto do satélite ("Mauasat online ...").
 3. Tabela EPS/OBD/BLDC/ACS/TTC, lista das últimas 10 mensagens ADS-B e o mapa

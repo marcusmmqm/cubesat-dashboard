@@ -44,20 +44,32 @@ class DecodeTest(unittest.TestCase):
         self.assertEqual(v["RefTorque"], 0)
 
     def test_408a2(self):
-        v = decode(0x408A2, bytes.fromhex("012C0002FFCDFFFD"))
-        self.assertEqual(v["Setpoint_atitude"], 300)        # uint16
+        # ordem de NovoMapaCANParaAjusteCodigo.png: Esforço PID, Setpoint_atitude,
+        # "x" (antigo Azimute satelital, sem uso), Vel. angular Azim.
+        v = decode(0x408A2, bytes.fromhex("0002012CFFCDFFFD"))
+        self.assertEqual(list(v), ["Esforço PID", "Setpoint_atitude",
+                                   "x", "Vel. angular Azim."])
         self.assertEqual(v["Esforço PID"], 2)
-        self.assertEqual(v["Azimute satélite"], -51)        # int16: FFCD = -51°
+        self.assertEqual(v["Setpoint_atitude"], 300)        # uint16
+        self.assertEqual(v["x"], -51)        # int16: FFCD = -51°
         self.assertEqual(v["Vel. angular Azim."], -3)       # int16
 
     def test_408a2_pid_negativo(self):
-        self.assertEqual(decode(0x408A2, bytes.fromhex("0000FF8800000000"))["Esforço PID"], -120)
+        self.assertEqual(decode(0x408A2, bytes.fromhex("FF88000000000000"))["Esforço PID"], -120)
 
-    def test_520b6_um_byte_por_campo(self):
-        v = decode(0x520B6, bytes.fromhex("170A050301010000"))
-        self.assertEqual(
-            list(v.values()), [23, 10, 5, 3, 1, 1, 0, 0]  # valores da imagem
-        )
+    def test_408a2_setpoint_sem_sinal(self):
+        self.assertEqual(decode(0x408A2, bytes.fromhex("0000FF0000000000"))["Setpoint_atitude"], 65280)
+
+    def test_520b6_aux_e_angulo(self):
+        # 4 × int16 big-endian com sinal: aux1 (bytes 0-1), aux2 (2-3), aux3 (4-5),
+        # angulo (6-7, posição atual de -180 a +180°)
+        v = decode(0x520B6, bytes.fromhex("16160D0F1400FFCD"))
+        self.assertEqual(v, {"aux1": 0x1616, "aux2": 0x0D0F, "aux3": 0x1400, "angulo": -51})
+
+    def test_520b6_com_sinal(self):
+        v = decode(0x520B6, bytes.fromhex("FF88000000000096"))
+        self.assertEqual(v["aux1"], -120)
+        self.assertEqual(v["angulo"], 150)
 
     def test_to_int16(self):
         self.assertEqual(to_int16(0x0000), 0)

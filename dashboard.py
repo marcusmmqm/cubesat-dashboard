@@ -11,7 +11,7 @@ import tkinter as tk
 import serial
 from serial.tools import list_ports
 
-from attitude import Attitude, hand_end
+from attitude import CAN_POSITION, CAN_TARGET, Attitude, hand_end
 from can_parser import decode, parse_line, to_int16
 
 # ----------------------------------------------------------------- layout
@@ -287,12 +287,13 @@ class XYChart(tk.Frame):
 
 # ----------------------------------------------------------------- relógio
 class ClockPanel(tk.Frame):
-    """Relógio de atitude (CAN 408A2): ponteiro vermelho e curto = Setpoint_atitude
-    (alvo), branco e longo = posição atual (Azimute satélite). Mostrador de 30° em
-    30°, 360° no alto, sentido horário. Mesma interface do XYChart."""
+    """Relógio de atitude: ponteiro branco e curto = Setpoint_atitude (alvo, 408A2),
+    vermelho e longo = posição atual (angulo do 520B6). Mostrador de 30° em 30°,
+    360° no alto, sentido horário. Mesma interface do XYChart."""
 
-    CAN_ID = 0x408A2
-    ROWS = [("setpoint", "Setpoint_atitude", ERR), ("position", "Posição atual", TEXT),
+    SETPOINT_COLOR, POSITION_COLOR = TEXT, ERR
+    ROWS = [("setpoint", "Setpoint_atitude", SETPOINT_COLOR),
+            ("position", "Posição atual", POSITION_COLOR),
             ("velocity", "Velocidade angular", None), ("diff", "Diferença", None)]
 
     def __init__(self, master, compact=False):
@@ -348,10 +349,10 @@ class ClockPanel(tk.Frame):
                 x0, y0 = hand_end(cx, cy, r - 4, deg)
                 x1, y1 = hand_end(cx, cy, r, deg)
                 c.create_line(x0, y0, x1, y1, fill=BORDER)
-        # vermelho (alvo) por baixo, branco (atual) por cima
-        self._target = c.create_line(cx, cy, cx, cy, fill=ERR, width=5,
+        # alvo (mais grosso) por baixo, posição atual por cima
+        self._target = c.create_line(cx, cy, cx, cy, fill=self.SETPOINT_COLOR, width=5,
                                      capstyle="round", state="hidden")
-        self._current = c.create_line(cx, cy, cx, cy, fill=TEXT, width=3,
+        self._current = c.create_line(cx, cy, cx, cy, fill=self.POSITION_COLOR, width=3,
                                       capstyle="round", state="hidden")
         c.create_oval(cx - 5, cy - 5, cx + 5, cy + 5, fill=TEXT, outline="")
 
@@ -359,11 +360,10 @@ class ClockPanel(tk.Frame):
         self.att.clear()
 
     def can_ids(self):
-        return {self.CAN_ID}
+        return {CAN_TARGET, CAN_POSITION}
 
     def push(self, can_id, t, values):
-        if can_id == self.CAN_ID:
-            self.att.update(t, values)
+        self.att.update(can_id, t, values)
 
     def redraw(self, now):
         for key, txt in self.att.legend(now).items():
@@ -374,10 +374,12 @@ class ClockPanel(tk.Frame):
         if self._geom is None:
             return
         cx, cy, r = self._geom
-        parado = self.att.is_stale(now)
-        for item, angle, length, color in (
-                (self._target, self.att.last_valid_setpoint, 0.55 * r, ERR),
-                (self._current, self.att.last_valid_position, 0.85 * r, TEXT)):
+        # cada ponteiro fica cinza quando o seu ID para de chegar
+        for item, angle, length, color, parado in (
+                (self._target, self.att.last_valid_setpoint, 0.55 * r,
+                 self.SETPOINT_COLOR, self.att.target_stale(now)),
+                (self._current, self.att.last_valid_position, 0.85 * r,
+                 self.POSITION_COLOR, self.att.position_stale(now))):
             if angle is None:
                 self.canvas.itemconfigure(item, state="hidden")
                 continue
@@ -426,7 +428,8 @@ class App:
                 sub += " · int16 com sinal"
             paineis.append((cfg["title"], sub,
                             lambda p, cfg=cfg: XYChart(p, cfg, window_s, compact)))
-        paineis.append(("Atitude", "vermelho = Setpoint_atitude · branco = posição atual (408A2)",
+        paineis.append(("Atitude", "branco = Setpoint_atitude (408A2) · "
+                                   "vermelho = posição atual (angulo, 520B6)",
                         lambda p: ClockPanel(p, compact)))
 
         self.charts = []

@@ -7,17 +7,20 @@ real, dois painéis lado a lado:
   MeasuredSpeed, RefSpeed (`1F864`) e Esforço PID (`408A2`), eixo fixo de -3000
   a +3000. A legenda mostra o valor mais recente de cada série.
 - **Atitude** (direita): relógio para acompanhar o posicionamento angular do
-  CubeSat, com os dados do `408A2`:
-  - ponteiro **vermelho, curto** = Setpoint_atitude (ângulo pedido, devolvido
-    pelo satélite depois do comando LIGA ATITUDE);
-  - ponteiro **branco, longo** = posição atual (Azimute satélite);
+  CubeSat:
+  - ponteiro **branco, curto** = Setpoint_atitude do `408A2` (ângulo pedido,
+    devolvido pelo satélite depois do comando LIGA ATITUDE);
+  - ponteiro **vermelho, longo** = posição atual = **angulo do `520B6`** (o
+    antigo Azimute satélite do `408A2` virou o campo "x", sem uso por enquanto);
   - mostrador de 30° em 30°, 360° no alto, sentido horário;
   - legenda: setpoint e posição atual de 0 a 359° (a posição chega de -180 a
     +180° e é convertida: -51 → 309°), velocidade angular (°/s, com sinal) e
     diferença até o alvo pelo caminho mais curto (-180 a +180°);
   - setpoint fora de 0–359 ou posição fora de -180–+180 aparece como
     "inválido (N)" e não move o ponteiro;
-  - sem `408A2` por mais de 5 s: "sem dados há X s" e ponteiros em cinza.
+  - cada ponteiro fica cinza quando o seu ID para de chegar por mais de 5 s
+    (`408A2` → setpoint; `520B6` → posição), com o aviso "sem 408A2 há X s" /
+    "sem 520B6 há X s".
 
 Cada painel tem um botão **Limpar**.
 
@@ -97,13 +100,14 @@ O receptor envia uma mensagem CAN por linha:
 `{0001F864 FF 86 00 00 00 00 00 00}`, também é aceito. Linhas com menos ou mais
 de 8 bytes são descartadas.
 
-Decodificação usada (nomes dos campos conforme `mapaCAN2.png`):
+Decodificação usada (nomes e ordem dos campos conforme o mapa CAN novo,
+`NovoMapaCANParaAjusteCodigo.png`, e o fluxo do Node-RED de 17/11/2026):
 
 | ID | Campos | Formato |
 |---|---|---|
 | `1F864` | MeasuredSpeed, RefSpeed, Measured Current, RefTorque | 4 × int16 big-endian com sinal |
-| `408A2` | Setpoint_atitude, Esforço PID, Azimute satélite, Vel. angular Azim. | 4 × 16 bits big-endian: Setpoint_atitude sem sinal (0–359°); Esforço PID, Azimute (-180 a +180°) e Vel. angular (°/s) com sinal |
-| `520B6` | v_solar_bottom, Yminus, Y, Xminus, X, top, vout, STATUS | 8 × uint8 |
+| `408A2` | Esforço PID, Setpoint_atitude, x (antigo Azimute satélite, sem uso), Vel. angular Azim. | 4 × 16 bits big-endian: Setpoint_atitude (bytes 2–3) sem sinal (0–359°); Esforço PID (bytes 0–1), x (bytes 4–5) e Vel. angular (°/s) com sinal |
+| `520B6` | aux1, aux2, aux3, angulo | 4 × int16 big-endian com sinal: aux1 = bytes 0–1 (antes v_solar_bottom e Yminus), aux2 = 2–3 (Y e Xminus), aux3 = 4–5 (X e top), angulo = 6–7 (posição atual, -180 a +180°) |
 
 ![Mapa CAN](mapaCAN2.png)
 

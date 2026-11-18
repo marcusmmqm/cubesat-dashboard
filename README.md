@@ -23,25 +23,35 @@ real, dois painéis lado a lado:
 
 Cada painel tem um botão **Limpar**.
 
-No topo ficam o campo **Setpoint (°)** e os botões **Liga atitude** e
-**Desliga atitude**, que enviam o comando `2004` ao CubeSat pela mesma serial
-do receptor LoRa (FTDI). O campo só guarda o valor (inteiro de 0 a 359; começa
-em 16): ele é enviado junto quando se clica em um dos botões.
+### Comandos ao CubeSat
 
-| Bytes | Conteúdo |
-|---|---|
-| 0 | status: `80` liga, `00` desliga |
-| 1–2 | Setpoint_atitude, uint16 big-endian |
-| 3–7 | `00` |
+As mensagens de cada botão ficam no arquivo **`comandos.txt`** (uma linha por
+botão, `NOME = mensagem`), para mudar sem mexer no código. O dashboard relê o
+arquivo a cada clique. No `.exe`, o `comandos.txt` fica ao lado do executável
+(o `build_windows.bat` copia os dois para a Área de Trabalho).
 
-| Botão | Linha enviada (setpoint 300° = `012C`) |
-|---|---|
-| Liga atitude | `{00002004:80012C0000000000}\r\n` |
-| Desliga atitude | `{00002004:00012C0000000000}\r\n` |
+- **Topo, à esquerda — atitude:** campo **Setpoint (°)** (0 a 359; começa em
+  16) e os botões **Liga atitude** / **Desliga atitude**. `{SETPOINT}` na
+  mensagem vira o setpoint em hex, 4 dígitos (300 → `012C`):
 
-Ao lado aparece "enviado às HH:MM:SS" ou "NÃO enviado" (serial desconectada ou
-setpoint fora de 0–359). O comando é montado em `commands.py`. Com `--tcp`
-(Raspberry) os botões não aparecem: lá os comandos saem pelo Node-RED.
+  | Botão | Mensagem (comandos.txt) | Enviado com setpoint 300° |
+  |---|---|---|
+  | Liga atitude | `{00002004:80{SETPOINT}0000000000}` | `{00002004:80012C0000000000}\r\n` |
+  | Desliga atitude | `{00002004:00{SETPOINT}0000000000}` | `{00002004:00012C0000000000}\r\n` |
+
+- **Topo, à direita — deployer:** **Aciona deployer** / **Desliga
+  deployer**, na outra ponta da linha, longe dos botões de atitude. As
+  mensagens ainda estão **vazias** no `comandos.txt`: os botões mostram "não
+  configurado" e não enviam nada até a mensagem ser preenchida.
+
+No meio da linha ficam o estado da conexão e o resultado do último comando:
+"✓ enviado HH:MM:SS" ou "✗" com o motivo (sem conexão, setpoint fora de 0–359,
+não configurado ou erro no `comandos.txt`).
+
+No Raspberry (`--tcp`), a linha vai ao Node-RED pela conexão TCP 5555, e ele a
+põe na serial do LoRa. Na tela de toque de 800x480 os botões ficam com nomes
+curtos e o setpoint é escolhido num teclado numérico que abre ao tocar no
+valor (o teclado virtual do sistema não aparece para o dashboard).
 
 ## Raspberry e Node-RED
 

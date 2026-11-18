@@ -961,7 +961,7 @@
   "type": "function",
   "z": "9b6df1cc.293a",
   "name": "Enviar pelo LoRa",
-  "func": "// Manda o comando pelo módulo LoRa (serial FTDI): o mesmo texto JSON que\n// antes ia ao ChirpStack, numa linha terminada em \\n.\nconst texto = String(msg.payload).trim();\nif (!texto) return null;\nconst hora = new Date().toLocaleTimeString('pt-BR');\nlet resumo = texto;\ntry {\n    const j = JSON.parse(texto);\n    const bytes = Buffer.from(j.data || '', 'base64').toString('hex').toUpperCase()\n        .replace(/(..)(?!$)/g, '$1 ');\n    resumo = `${j.devEui || '?'} · ${bytes}`;\n} catch (e) { /* não é JSON: mostra o texto */ }\nnode.status({fill: 'green', shape: 'dot', text: `${hora} ${resumo}`});\nreturn [{payload: texto + \"\\n\"}, {payload: `${hora} · ${resumo}`}];\n",
+  "func": "// Manda o comando pelo módulo LoRa (serial FTDI), com a mensagem do\n// comandos.txt (copiada aqui por gerar_fluxo_rasp.py). Os botões do painel\n// ainda montam o JSON do ChirpStack; os bytes dizem qual botão foi:\n//   00 05 + setpoint = LIGA ATITUDE      00 04 = DESLIGA ATITUDE\n//   00 01 = ACIONA DEPLOYER              00 02 = DESLIGA DEPLOYER\n// {SETPOINT} vira o setpoint em hex, 4 dígitos (300 -> 012C).\nconst COMANDOS = {\"LIGA_ATITUDE\": \"{00002004:80{SETPOINT}0000000000}\", \"DESLIGA_ATITUDE\": \"{00002004:00{SETPOINT}0000000000}\", \"ACIONA_DEPLOYER\": \"\", \"DESLIGA_DEPLOYER\": \"\"};\nconst BOTOES = {5: 'LIGA_ATITUDE', 4: 'DESLIGA_ATITUDE', 1: 'ACIONA_DEPLOYER', 2: 'DESLIGA_DEPLOYER'};\nconst texto = String(msg.payload).trim();\nif (!texto) return null;\nconst hora = new Date().toLocaleTimeString('pt-BR');\nconst nao = (rotulo, motivo) => {\n    node.status({fill: 'red', shape: 'ring', text: `${hora} ${rotulo} NÃO enviado`});\n    return [null, {payload: `${hora} · ${rotulo} NÃO enviado: ${motivo}`}];\n};\nlet bytes;\ntry { bytes = Buffer.from(JSON.parse(texto).data || '', 'base64'); }\ncatch (e) { return nao('comando', 'formato desconhecido'); }\nconst nome = bytes.length >= 2 && bytes[0] === 0 ? BOTOES[bytes[1]] : undefined;\nif (!nome) return nao('comando', 'desconhecido (' + bytes.toString('hex').toUpperCase() + ')');\nconst rotulo = nome.replace('_', ' ');\nlet linha = COMANDOS[nome] || '';\nif (!linha) return nao(rotulo, 'não configurado no comandos.txt');\nlet sp = null;\nif (linha.includes('{SETPOINT}')) {\n    const valido = v => Number.isInteger(v) && v >= 0 && v <= 359;\n    if (nome === 'LIGA_ATITUDE') {\n        sp = bytes.length >= 4 ? (bytes[2] << 8 | bytes[3]) : NaN;\n        // não manda um ângulo qualquer ao satélite\n        if (!valido(sp)) return nao(rotulo, 'digite o Setpoint_atitude (0 a 359) e aperte Enter');\n    } else {\n        const g = global.get(\"GlobalCubesat.azimute_set\");\n        sp = (g === undefined || g === null || String(g).trim() === '') ? NaN : Number(g);\n        if (!valido(sp)) sp = 16;   // o setpoint não importa aqui (16 = valor dos exemplos)\n    }\n    linha = linha.split('{SETPOINT}').join(sp.toString(16).toUpperCase().padStart(4, '0'));\n}\nconst resumo = `${rotulo}${sp === null ? '' : ' ' + sp + '°'} · ${linha}`;\nnode.status({fill: 'green', shape: 'dot', text: `${hora} ${resumo}`});\nreturn [{payload: linha + \"\\r\\n\"}, {payload: `${hora} · ${resumo}`}];\n",
   "outputs": 2,
   "noerr": 0,
   "x": 2420,
@@ -1040,14 +1040,56 @@
   "z": "9b6df1cc.293a",
   "name": "dashboard Python (porta 5555)",
   "host": "",
-  "port": "5555",
-  "beserver": "server",
+  "port": "",
+  "beserver": "reply",
   "base64": false,
   "end": false,
   "tls": "",
   "x": 2680,
   "y": 1300,
   "wires": []
+ },
+ {
+  "id": "cubesat.tcp.in",
+  "type": "tcp in",
+  "z": "9b6df1cc.293a",
+  "name": "comandos do dashboard Python (porta 5555)",
+  "server": "server",
+  "host": "",
+  "port": "5555",
+  "datamode": "stream",
+  "datatype": "utf8",
+  "newline": "\\n",
+  "topic": "",
+  "trim": false,
+  "base64": false,
+  "tls": "",
+  "x": 2180,
+  "y": 1240,
+  "wires": [
+   [
+    "cubesat.cmd.dashboard"
+   ]
+  ]
+ },
+ {
+  "id": "cubesat.cmd.dashboard",
+  "type": "function",
+  "z": "9b6df1cc.293a",
+  "name": "comando do dashboard (só 2004, só local)",
+  "func": "// Comando do dashboard Python (mesma conexão TCP pela qual ele recebe as\n// linhas). Aceito só do próprio Raspberry e só se for exatamente uma das\n// mensagens do comandos.txt (com setpoint de 0 a 359); o resto é ignorado.\nconst COMANDOS = {\"LIGA_ATITUDE\": \"{00002004:80{SETPOINT}0000000000}\", \"DESLIGA_ATITUDE\": \"{00002004:00{SETPOINT}0000000000}\", \"ACIONA_DEPLOYER\": \"\", \"DESLIGA_DEPLOYER\": \"\"};\nconst locais = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];\nconst linha = String(msg.payload).trim();\nconst hora = new Date().toLocaleTimeString('pt-BR');\nconst esc = s => s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\nlet achado = null;\nfor (const [nome, modelo] of Object.entries(COMANDOS)) {\n    if (!modelo) continue;\n    const re = new RegExp('^' + modelo.split('{SETPOINT}').map(esc).join('([0-9A-F]{4})') + '$');\n    const m = re.exec(linha);\n    if (!m) continue;\n    const sps = m.slice(1).map(h => parseInt(h, 16));\n    if (sps.some(v => v > 359) || new Set(sps).size > 1) continue;\n    achado = {nome, sp: sps.length ? sps[0] : null};\n    break;\n}\nif (!locais.includes(msg.ip) || !achado) {\n    if (linha) {\n        node.warn(`comando recusado (de ${msg.ip}): ${linha}`);\n        node.status({fill: 'red', shape: 'ring', text: `${hora} recusado: ${linha}`});\n    }\n    return null;\n}\nconst resumo = `${achado.nome.replace('_', ' ')}${achado.sp === null ? '' : ' ' + achado.sp + '°'} ` +\n               `(dashboard) · ${linha}`;\nnode.status({fill: 'green', shape: 'dot', text: `${hora} ${resumo}`});\nreturn [{payload: linha + \"\\r\\n\"}, {payload: `${hora} · ${resumo}`}];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "x": 2440,
+  "y": 1240,
+  "wires": [
+   [
+    "cubesat.serial.out"
+   ],
+   [
+    "cubesat.txt.ultimo"
+   ]
+  ]
  },
  {
   "id": "cubesat.decodificar",
@@ -1160,7 +1202,7 @@
   "type": "comment",
   "z": "9b6df1cc.293a",
   "name": "LoRa pela serial FTDI (/dev/ttyUSB0, 115200) — gerado por gerar_fluxo_rasp.py",
-  "info": "Comandos dos botões saem pela serial; linhas recebidas são decodificadas para o painel e repassadas ao dashboard Python pela porta TCP 5555.",
+  "info": "Comandos dos botões e do dashboard Python saem pela serial; linhas recebidas são decodificadas para o painel e repassadas ao dashboard Python pela porta TCP 5555.",
   "x": 2300,
   "y": 1120,
   "wires": []

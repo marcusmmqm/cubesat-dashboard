@@ -4,9 +4,11 @@ Cria /tmp/ttyLORA (pty) e manda, como o receptor LoRa real, uma mensagem CAN por
 linha. Simula a atitude: o satélite gira até o Setpoint_atitude com um controle
 PD um pouco subamortecido (oscila antes de parar).
 
-- Lê os comandos que o Node-RED envia pela serial (o JSON do ChirpStack):
-  LIGA ATITUDE (00 05 + azimute) -> novo setpoint e controle ligado;
-  DESLIGA ATITUDE (00 04) -> controle desligado (gira solto, perdendo velocidade).
+- Lê os comandos que o Node-RED envia pela serial: o CAN 2004
+  ({00002004:80SSSS0000000000}: 80 liga com o setpoint SSSS, 00 desliga) e,
+  do fluxo antigo, o JSON do ChirpStack (00 05 + azimute / 00 04).
+  Ligar -> novo setpoint e controle ligado; desligar -> controle desligado
+  (gira solto, perdendo velocidade).
 - Sem comando recente, o setpoint muda sozinho a cada 45 s.
 - Uma vez a cada 2 min, o 408A2 some por 7 s (para ver "sem dados"); a posição
   atual continua chegando pelo angulo do 520B6.
@@ -18,6 +20,7 @@ import json
 import math
 import os
 import pty
+import re
 import random
 import select
 import time
@@ -76,10 +79,15 @@ def main():
             buf += os.read(m, 4096)
         while b"\n" in buf:
             linha, buf = buf.split(b"\n", 1)
-            try:
-                dados = base64.b64decode(json.loads(linha)["data"])
-            except (ValueError, KeyError, TypeError):
-                continue
+            cmd = re.match(rb"\s*\{00002004:(80|00)([0-9A-Fa-f]{4})[0-9A-Fa-f]{10}\}", linha)
+            if cmd:   # CAN 2004 -> mesmo significado do JSON antigo
+                sp = bytes.fromhex(cmd.group(2).decode())
+                dados = (b"\x00\x05" + sp) if cmd.group(1) == b"80" else b"\x00\x04"
+            else:
+                try:
+                    dados = base64.b64decode(json.loads(linha)["data"])
+                except (ValueError, KeyError, TypeError):
+                    continue
             if dados[:2] == b"\x00\x05":
                 if len(dados) >= 4:
                     setpoint = (dados[2] << 8 | dados[3]) % 360

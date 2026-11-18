@@ -1,0 +1,26 @@
+# Mensagens que os botões enviam ao CubeSat pelo módulo LoRa.
+# Usadas pelo dashboard Python (PC e Raspberry) e pelos botões do Node-RED do
+# Raspberry.
+#
+# Formato: uma linha por botão,   NOME = mensagem
+#   - {SETPOINT} é trocado pelo setpoint de atitude em hexadecimal, 4 dígitos,
+#     big-endian (16 -> 0010, 90 -> 005A, 300 -> 012C);
+#   - o \r\n do fim da linha é colocado sozinho;
+#   - mensagem vazia = botão não envia nada (mostra "não configurado");
+#   - linhas começando com # são comentários.
+#
+# Depois de mudar:
+#   - dashboard Python: vale no próximo clique (não precisa reabrir);
+#   - Raspberry: rode  raspberry/enviar_para_rasp.sh  no PC (copia este arquivo
+#     para o dashboard de lá e gera o fluxo do Node-RED com estas mensagens).
+
+# ---- atitude (CAN 2004: byte 0 = 80 liga / 00 desliga; bytes 1-2 = setpoint)
+LIGA_ATITUDE     = {00002004:80{SETPOINT}0000000000}
+DESLIGA_ATITUDE  = {00002004:00{SETPOINT}0000000000}
+
+# ---- deployer: ainda sem a mensagem que o CubeSat recebe.
+# (no fluxo antigo, pelo ChirpStack, eram estes JSON:
+#    ACIONA:  {"devEui": "0005168000136ee4","confirmed": true,"fPort": 1,"data": "AAE="}
+#    DESLIGA: {"devEui": "0005168000136ee4","confirmed": true,"fPort": 1,"data": "AAI="} )
+ACIONA_DEPLOYER  =
+DESLIGA_DEPLOYER =

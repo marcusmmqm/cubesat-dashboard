@@ -7,13 +7,15 @@ import sys
 import threading
 import time
 import tkinter as tk
+import tkinter.font as tkfont
 
 import serial
 from serial.tools import list_ports
 
 from attitude import CAN_POSITION, CAN_TARGET, Attitude, hand_end
 from can_parser import decode, parse_line, to_int16
-from commands import SETPOINT_INICIAL, attitude_command, parse_setpoint
+from commands import (SETPOINT_INICIAL, NaoConfigurado, command_line, load_commands,
+                      parse_setpoint)
 
 # ----------------------------------------------------------------- layout
 # Gráficos de linha (o painel da direita é o relógio de atitude, ClockPanel).
@@ -130,13 +132,32 @@ class SerialReader(threading.Thread):
 class TcpReader(threading.Thread):
     """Recebe as linhas do LoRa repassadas pelo Node-RED (conexão TCP local) e
     põe (t, can_id, data) na fila. Usado no Raspberry, onde o Node-RED é o dono
-    da serial (para também poder enviar comandos)."""
+    da serial). send() manda um comando pela mesma conexão: o Node-RED repassa
+    à serial do LoRa."""
 
     def __init__(self, host, port, out):
         super().__init__(daemon=True)
         self.host, self.port, self.out = host, port, out
         self.status = ("conectando ao Node-RED…", WARN)
         self._stop_ev = threading.Event()
+        self._sock = None
+        self._lock = threading.Lock()
+
+    @property
+    def connected(self):
+        return self._sock is not None
+
+    def send(self, data):
+        """Manda data (bytes) ao Node-RED. False se não estiver conectado."""
+        with self._lock:
+            s = self._sock
+            if s is None:
+                return False
+            try:
+                s.sendall(data)
+                return True
+            except OSError:
+                return False
 
     def run(self):
         while not self._stop_ev.is_set():
@@ -144,20 +165,25 @@ class TcpReader(threading.Thread):
                 with socket.create_connection((self.host, self.port), timeout=2) as s:
                     s.settimeout(0.5)
                     self.status = (f"via Node-RED ({self.host}:{self.port})", OK)
-                    buf = b""
-                    while not self._stop_ev.is_set():
-                        try:
-                            chunk = s.recv(4096)
-                        except socket.timeout:
-                            continue
-                        if not chunk:
-                            raise ConnectionError("Node-RED fechou a conexão")
-                        buf += chunk
-                        *lines, buf = buf.split(b"\n")
-                        for line in lines:
-                            msg = parse_line(line)
-                            if msg:
-                                self.out.put((time.time(),) + msg)
+                    self._sock = s
+                    try:
+                        buf = b""
+                        while not self._stop_ev.is_set():
+                            try:
+                                chunk = s.recv(4096)
+                            except socket.timeout:
+                                continue
+                            if not chunk:
+                                raise ConnectionError("Node-RED fechou a conexão")
+                            buf += chunk
+                            *lines, buf = buf.split(b"\n")
+                            for line in lines:
+                                msg = parse_line(line)
+                                if msg:
+                                    self.out.put((time.time(),) + msg)
+                    finally:
+                        with self._lock:
+                            self._sock = None
             except OSError as e:
                 self.status = (f"sem conexão com o Node-RED ({e}) — tentando de novo", ERR)
                 self._stop_ev.wait(2.0)
@@ -415,6 +441,106 @@ class ClockPanel(tk.Frame):
                                       fill=MUTED if parado else color)
 
 
+# ----------------------------------------------------------------- textos
+class FitLabel(tk.Label):
+    """Label de uma linha que encurta o texto com "…" para caber na largura que
+    recebeu (e volta a mostrar tudo quando sobra espaço)."""
+
+    def __init__(self, master, **kw):
+        super().__init__(master, **kw)
+        self._full = ""
+        self._font = tkfont.Font(font=self.cget("font"))
+        self.bind("<Configure>", lambda e: self._fit())
+
+    def medir(self, texto):
+        return self._font.measure(texto)
+
+    def set(self, texto, cor):
+        self._full = texto
+        self.config(fg=cor)
+        self._fit()
+
+    def _fit(self):
+        largura = self.winfo_width() - 2 * int(self.cget("padx")) - 4
+        texto = self._full
+        if largura > 1 and self.medir(texto) > largura:
+            while texto and self.medir(texto + "…") > largura:
+                texto = texto[:-1]
+            texto = texto.rstrip() + "…"
+        if texto != self.cget("text"):
+            self.config(text=texto)
+
+
+# ----------------------------------------------------------------- teclado
+class Keypad(tk.Frame):
+    """Teclado numérico por cima do dashboard, para a tela de toque do
+    Raspberry (o teclado virtual do sistema não aparece para programas Tk).
+    OK chama on_ok(setpoint) com um inteiro de 0 a 359."""
+
+    TECLAS = [("1", "2", "3"), ("4", "5", "6"), ("7", "8", "9"), ("⌫", "0", "OK")]
+
+    def __init__(self, master, on_ok):
+        super().__init__(master, bg=PANEL, padx=12, pady=10,
+                         highlightthickness=2, highlightbackground=ACCENT)
+        self.on_ok = on_ok
+        self.text = ""
+        tk.Label(self, text="Setpoint de atitude (0 a 359°)", bg=PANEL, fg=MUTED,
+                 font=(FONT, 10)).grid(row=0, column=0, columnspan=3, pady=(0, 4))
+        self.display = tk.Label(self, text="", bg=TILE, fg=TEXT, width=8,
+                                font=(MONO, 20, "bold"))
+        self.display.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+        for r, linha in enumerate(self.TECLAS, start=2):
+            for c, k in enumerate(linha):
+                cor = OK if k == "OK" else TEXT
+                tk.Button(self, text=k, width=4, bg=TILE, fg=cor,
+                          activebackground=BORDER, activeforeground=cor,
+                          relief="flat", highlightthickness=1,
+                          highlightbackground=BORDER, font=(FONT, 15, "bold"),
+                          command=lambda k=k: self.press(k),
+                          ).grid(row=r, column=c, padx=3, pady=3, ipady=4)
+        tk.Button(self, text="Cancelar", bg=TILE, fg=MUTED, activebackground=BORDER,
+                  relief="flat", highlightthickness=1, highlightbackground=BORDER,
+                  font=(FONT, 11), command=lambda: self.press("Cancelar"),
+                  ).grid(row=len(self.TECLAS) + 2, column=0, columnspan=3,
+                         sticky="ew", padx=3, pady=(6, 0), ipady=2)
+
+    @property
+    def is_open(self):
+        return bool(self.place_info())
+
+    def open(self, value):
+        self.text = value.strip()
+        self._show()
+        self.place(relx=0.5, rely=0.5, anchor="center")
+        self.lift()
+
+    def close(self):
+        self.place_forget()
+
+    def press(self, k):
+        if k.isdigit():
+            if len(self.text) < 3:
+                self.text += k
+        elif k == "⌫":
+            self.text = self.text[:-1]
+        elif k == "Cancelar":
+            self.close()
+            return
+        elif k == "OK":
+            try:
+                v = parse_setpoint(self.text)
+            except ValueError:
+                self._show(erro=True)
+                return
+            self.close()
+            self.on_ok(v)
+            return
+        self._show()
+
+    def _show(self, erro=False):
+        self.display.config(text=(self.text or "—") + "°", fg=ERR if erro else TEXT)
+
+
 # ----------------------------------------------------------------- app
 class App:
     def __init__(self, root, port, baud, window_s, fullscreen=False, tcp=None):
@@ -435,39 +561,66 @@ class App:
         # tela pequena (ex.: display de 800x480 do Raspberry): legenda mais enxuta
         compact = fullscreen and root.winfo_screenwidth() < 1200
 
-        top = tk.Frame(root, bg=BG)
-        top.pack(fill="x", padx=16, pady=(12, 4))
-        tk.Label(top, text="CubeSat · Telemetria LoRa", bg=BG, fg=TEXT,
-                 font=(FONT, 15, "bold")).pack(side="left")
-        self.status = tk.Label(top, text="", bg=BG, fg=MUTED, font=(FONT, 10))
-        self.status.pack(side="right")
+        self.compact = compact
 
-        # comandos ao CubeSat: só com a serial aberta pelo próprio dashboard
-        # (com --tcp, no Raspberry, quem envia é o Node-RED: sem botões)
-        if hasattr(self.reader, "send"):
-            cmd = tk.Frame(top, bg=BG)
-            cmd.pack(side="left", padx=(24, 0))
-            # o campo só guarda o setpoint: ele sai junto com Liga ou Desliga
+        top = tk.Frame(root, bg=BG)
+        top.pack(fill="x", padx=10 if compact else 16, pady=(8, 2) if compact else (12, 4))
+        if not compact:   # no Raspberry a barra do quiosque já mostra o nome
+            tk.Label(top, text="CubeSat · Telemetria LoRa", bg=BG, fg=TEXT,
+                     font=(FONT, 15, "bold")).pack(side="left")
+
+        # comandos ao CubeSat (mensagens em comandos.txt): pela serial aberta
+        # pelo próprio dashboard (PC) ou pelo Node-RED, via TCP (Raspberry).
+        # Na linha do topo: atitude à esquerda, deployer à direita e, no meio,
+        # o estado da conexão e o resultado do último comando. Os botões são
+        # criados antes do meio: um texto longo não cobre os botões
+        cmd = tk.Frame(top, bg=BG)
+        cmd.pack(side="left", padx=(0 if compact else 24, 0))
+        # meio (criado antes dos botões e empacotado por último): estado da
+        # conexão e resultado do último comando (atitude ou deployer)
+        meio = tk.Frame(top, bg=BG)
+        fonte = (FONT, 9 if compact else 10)
+        self.status = FitLabel(meio, text="", bg=BG, fg=MUTED, font=fonte)
+        self.cmd_status = FitLabel(meio, text="", bg=BG, fg=MUTED, font=fonte)
+
+        # o campo só guarda o setpoint: ele sai junto com Liga ou Desliga
+        self.setpoint_var = tk.StringVar(value=str(SETPOINT_INICIAL))
+        if compact:
+            # tela de toque: o campo é um botão que abre o teclado numérico
+            self.setpoint_btn = tk.Button(
+                cmd, text=f"Setpoint {SETPOINT_INICIAL}°", bg=TILE, fg=TEXT,
+                activebackground=BORDER, activeforeground=TEXT, relief="flat",
+                highlightthickness=1, highlightbackground=ACCENT, padx=8, pady=4,
+                font=(FONT, 10, "bold"),
+                command=lambda: self.keypad.open(self.setpoint_var.get()))
+            self.setpoint_btn.pack(side="left", padx=(0, 6))
+            self.keypad = Keypad(root, self.set_setpoint)
+        else:
             tk.Label(cmd, text="Setpoint (°)", bg=BG, fg=MUTED,
                      font=(FONT, 10)).pack(side="left", padx=(0, 4))
-            self.setpoint_var = tk.StringVar(value=str(SETPOINT_INICIAL))
             entry = tk.Entry(cmd, textvariable=self.setpoint_var, width=5,
                              justify="center", bg=TILE, fg=TEXT, insertbackground=TEXT,
                              relief="flat", highlightthickness=1,
                              highlightbackground=BORDER, highlightcolor=ACCENT,
                              font=(MONO, 11))
             entry.pack(side="left", padx=(0, 6), ipady=2)
-            for texto, on, cor in (("Liga atitude", True, OK),
-                                   ("Desliga atitude", False, ERR)):
-                tk.Button(cmd, text=texto, bg=TILE, fg=cor,
-                          activebackground=BORDER, activeforeground=cor,
-                          relief="flat", highlightthickness=1,
-                          highlightbackground=cor, padx=12, pady=2,
-                          font=(FONT, 10, "bold"), cursor="hand2",
-                          command=lambda t=texto, o=on: self.send_command(t, o),
-                          ).pack(side="left", padx=(0, 6))
-            self.cmd_status = tk.Label(cmd, text="", bg=BG, fg=MUTED, font=(FONT, 9))
-            self.cmd_status.pack(side="left", padx=(6, 0))
+        for nome, texto, cor in (("LIGA_ATITUDE", "Liga atitude", OK),
+                                 ("DESLIGA_ATITUDE", "Desliga atitude", ERR)):
+            self._botao_comando(cmd, nome, texto.split()[0] if compact else texto,
+                                cor, self.cmd_status).pack(side="left", padx=(0, 6))
+
+        dep = tk.Frame(top, bg=BG)
+        dep.pack(side="right")
+        tk.Label(dep, text="Deployer", bg=BG, fg=WARN,
+                 font=(FONT, 10, "bold")).pack(side="left")
+        for nome, texto in (("ACIONA_DEPLOYER", "Aciona deployer"),
+                            ("DESLIGA_DEPLOYER", "Desliga deployer")):
+            self._botao_comando(dep, nome, texto.split()[0] if compact else texto,
+                                WARN, self.cmd_status).pack(side="left", padx=(6, 0))
+
+        meio.pack(side="left", fill="x", expand=True, padx=(2, 8))
+        self.status.pack(fill="x")
+        self.cmd_status.pack(fill="x")
 
         body = tk.Frame(root, bg=BG)
         body.pack(fill="both", expand=True, padx=12, pady=(4, 12))
@@ -514,22 +667,45 @@ class App:
         self.reader.start()
         self.tick()
 
-    def send_command(self, nome, on):
-        """Monta o comando 2004 com o setpoint do campo, envia pela serial do
-        LoRa e mostra se foi ou não."""
+    def set_setpoint(self, v):
+        """Setpoint escolhido no teclado numérico (tela de toque)."""
+        self.setpoint_var.set(str(v))
+        self.setpoint_btn.config(text=f"Setpoint {v}°")
+
+    def _botao_comando(self, pai, nome, texto, cor, status):
+        return tk.Button(pai, text=texto, bg=TILE, fg=cor,
+                         activebackground=BORDER, activeforeground=cor,
+                         relief="flat", highlightthickness=1, highlightbackground=cor,
+                         padx=10 if self.compact else 12, pady=4 if self.compact else 2,
+                         font=(FONT, 10, "bold"), cursor="hand2",
+                         command=lambda: self.send_command(nome, texto, status))
+
+    def send_command(self, nome, texto, status):
+        """Envia a mensagem do botão `nome` (comandos.txt, relido a cada clique)
+        pela serial do LoRa (PC) ou pelo Node-RED (Raspberry) e mostra em
+        `status` se foi ou não."""
+        def nao(motivo):   # ✗ = NÃO enviado
+            status.set(f"{texto} ✗ {motivo}", ERR)
         try:
-            setpoint = parse_setpoint(self.setpoint_var.get())
-        except ValueError:
-            self.cmd_status.config(text=f"{nome}: NÃO enviado (setpoint deve ser "
-                                        "inteiro de 0 a 359)", fg=ERR)
-            return
+            cmds = load_commands()
+        except (OSError, ValueError) as e:
+            print(f"comandos.txt: {e}", file=sys.stderr)   # detalhe no log
+            return nao("erro no comandos.txt")
+        setpoint = None
+        if "ATITUDE" in nome:
+            try:
+                setpoint = parse_setpoint(self.setpoint_var.get())
+            except ValueError:
+                return nao("setpoint de 0 a 359")
+        try:
+            linha = command_line(cmds, nome, setpoint)
+        except NaoConfigurado:
+            return nao("não configurado")
+        if not self.reader.send(linha):
+            return nao("sem Node-RED" if isinstance(self.reader, TcpReader) else "sem serial")
         hora = time.strftime("%H:%M:%S")
-        if self.reader.send(attitude_command(on, setpoint)):
-            self.cmd_status.config(text=f"{nome} ({setpoint}°): enviado às {hora}",
-                                   fg=OK)
-        else:
-            self.cmd_status.config(text=f"{nome}: NÃO enviado (serial desconectada)",
-                                   fg=ERR)
+        sp = f" {setpoint}°" if setpoint is not None else ""
+        status.set(f"{texto}{sp} ✓ enviado {hora}", OK)
 
     def poll(self):
         try:
@@ -550,10 +726,14 @@ class App:
         for chart in self.charts:
             chart.redraw(now)
         text, color = self.reader.status
-        status = (f"● {text} · {self.total} mensagens", color)
+        if self.compact:   # tela de 800 px: status curto
+            curto = "Node-RED" if text.startswith("via Node-RED") else text
+            status = (f"● {curto} · {self.total}", color)
+        else:
+            status = (f"● {text} · {self.total} msg", color)
         if status != self._status_shown:
             self._status_shown = status
-            self.status.config(text=status[0], fg=status[1])
+            self.status.set(*status)
 
     def tick(self):
         """Um quadro: lê o que chegou da serial e redesenha (FRAME_MS)."""

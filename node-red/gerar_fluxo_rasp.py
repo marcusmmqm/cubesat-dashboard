@@ -2,13 +2,15 @@
 
 O que muda em relação ao fluxo original:
 - O módulo LoRa (serial FTDI) substitui o ChirpStack nos dois sentidos:
-  * comandos dos botões: o mesmo texto JSON que ia ao ChirpStack sai pela serial,
-    uma linha terminada em "\\n";
+  * comandos dos botões (atitude e deployer): saem com as mensagens do
+    comandos.txt (o mesmo do dashboard Python), uma linha com \\r\\n;
   * telemetria: cada linha CAN recebida ({0001F864:...}) é decodificada pelo
     mesmo CUBESATProtocolParser do codec1.txt e entra no fluxo antigo como se
     viesse do ChirpStack (porta 250); linhas de texto equivalem à porta 251.
 - O Node-RED é o dono da serial: cada linha recebida também é repassada ao
-  dashboard Python pela porta TCP 5555.
+  dashboard Python pela porta TCP 5555; pela mesma conexão o dashboard manda os
+  comandos (só de 127.0.0.1 e só as mensagens do comandos.txt), que o
+  Node-RED põe na serial.
 - MQTT (ChirpStack) e envio ao Supabase desativados: nada sai do Raspberry
   (o mapa ADS-B só é carregado da internet se houver rede).
 - Grupo "TCC Samuel" removido (não é mais usado), com os nós que só serviam a ele.
@@ -20,11 +22,16 @@ Uso:  python3 gerar_fluxo_rasp.py [--porta /dev/ttyUSB0] [--saida fluxoCubesat-r
 """
 import argparse
 import json
+import sys
 from pathlib import Path
 
 AQUI = Path(__file__).parent
 ORIGINAL = AQUI / "fluxoCubesatNODE.txt"
 CODEC = AQUI / "codec1.txt"
+COMANDOS_TXT = AQUI.parent / "comandos.txt"   # mensagens dos botões (o mesmo do dashboard)
+
+sys.path.insert(0, str(AQUI.parent))
+from commands import NOMES, load_commands  # noqa: E402
 
 PORTA_SERIAL = "/dev/ttyUSB0"
 BAUD = "115200"
@@ -81,21 +88,90 @@ LAYOUT = {
     ("ui_template", "GlobalCelescData Viewer"): (14, 14, 0),
 }
 
-FUNC_ENVIAR = r"""// Manda o comando pelo módulo LoRa (serial FTDI): o mesmo texto JSON que
-// antes ia ao ChirpStack, numa linha terminada em \n.
+FUNC_ENVIAR = r"""// Manda o comando pelo módulo LoRa (serial FTDI), com a mensagem do
+// comandos.txt (copiada aqui por gerar_fluxo_rasp.py). Os botões do painel
+// ainda montam o JSON do ChirpStack; os bytes dizem qual botão foi:
+//   00 05 + setpoint = LIGA ATITUDE      00 04 = DESLIGA ATITUDE
+//   00 01 = ACIONA DEPLOYER              00 02 = DESLIGA DEPLOYER
+// {SETPOINT} vira o setpoint em hex, 4 dígitos (300 -> 012C).
+const COMANDOS = %COMANDOS%;
+const BOTOES = {5: 'LIGA_ATITUDE', 4: 'DESLIGA_ATITUDE', 1: 'ACIONA_DEPLOYER', 2: 'DESLIGA_DEPLOYER'};
 const texto = String(msg.payload).trim();
 if (!texto) return null;
 const hora = new Date().toLocaleTimeString('pt-BR');
-let resumo = texto;
-try {
-    const j = JSON.parse(texto);
-    const bytes = Buffer.from(j.data || '', 'base64').toString('hex').toUpperCase()
-        .replace(/(..)(?!$)/g, '$1 ');
-    resumo = `${j.devEui || '?'} · ${bytes}`;
-} catch (e) { /* não é JSON: mostra o texto */ }
+const nao = (rotulo, motivo) => {
+    node.status({fill: 'red', shape: 'ring', text: `${hora} ${rotulo} NÃO enviado`});
+    return [null, {payload: `${hora} · ${rotulo} NÃO enviado: ${motivo}`}];
+};
+let bytes;
+try { bytes = Buffer.from(JSON.parse(texto).data || '', 'base64'); }
+catch (e) { return nao('comando', 'formato desconhecido'); }
+const nome = bytes.length >= 2 && bytes[0] === 0 ? BOTOES[bytes[1]] : undefined;
+if (!nome) return nao('comando', 'desconhecido (' + bytes.toString('hex').toUpperCase() + ')');
+const rotulo = nome.replace('_', ' ');
+let linha = COMANDOS[nome] || '';
+if (!linha) return nao(rotulo, 'não configurado no comandos.txt');
+let sp = null;
+if (linha.includes('{SETPOINT}')) {
+    const valido = v => Number.isInteger(v) && v >= 0 && v <= 359;
+    if (nome === 'LIGA_ATITUDE') {
+        sp = bytes.length >= 4 ? (bytes[2] << 8 | bytes[3]) : NaN;
+        // não manda um ângulo qualquer ao satélite
+        if (!valido(sp)) return nao(rotulo, 'digite o Setpoint_atitude (0 a 359) e aperte Enter');
+    } else {
+        const g = global.get("GlobalCubesat.azimute_set");
+        sp = (g === undefined || g === null || String(g).trim() === '') ? NaN : Number(g);
+        if (!valido(sp)) sp = 16;   // o setpoint não importa aqui (16 = valor dos exemplos)
+    }
+    linha = linha.split('{SETPOINT}').join(sp.toString(16).toUpperCase().padStart(4, '0'));
+}
+const resumo = `${rotulo}${sp === null ? '' : ' ' + sp + '°'} · ${linha}`;
 node.status({fill: 'green', shape: 'dot', text: `${hora} ${resumo}`});
-return [{payload: texto + "\n"}, {payload: `${hora} · ${resumo}`}];
+return [{payload: linha + "\r\n"}, {payload: `${hora} · ${resumo}`}];
 """
+
+FUNC_CMD_DASHBOARD = r"""// Comando do dashboard Python (mesma conexão TCP pela qual ele recebe as
+// linhas). Aceito só do próprio Raspberry e só se for exatamente uma das
+// mensagens do comandos.txt (com setpoint de 0 a 359); o resto é ignorado.
+const COMANDOS = %COMANDOS%;
+const locais = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+const linha = String(msg.payload).trim();
+const hora = new Date().toLocaleTimeString('pt-BR');
+const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+let achado = null;
+for (const [nome, modelo] of Object.entries(COMANDOS)) {
+    if (!modelo) continue;
+    const re = new RegExp('^' + modelo.split('{SETPOINT}').map(esc).join('([0-9A-F]{4})') + '$');
+    const m = re.exec(linha);
+    if (!m) continue;
+    const sps = m.slice(1).map(h => parseInt(h, 16));
+    if (sps.some(v => v > 359) || new Set(sps).size > 1) continue;
+    achado = {nome, sp: sps.length ? sps[0] : null};
+    break;
+}
+if (!locais.includes(msg.ip) || !achado) {
+    if (linha) {
+        node.warn(`comando recusado (de ${msg.ip}): ${linha}`);
+        node.status({fill: 'red', shape: 'ring', text: `${hora} recusado: ${linha}`});
+    }
+    return null;
+}
+const resumo = `${achado.nome.replace('_', ' ')}${achado.sp === null ? '' : ' ' + achado.sp + '°'} ` +
+               `(dashboard) · ${linha}`;
+node.status({fill: 'green', shape: 'dot', text: `${hora} ${resumo}`});
+return [{payload: linha + "\r\n"}, {payload: `${hora} · ${resumo}`}];
+"""
+
+
+def func_enviar(cmds):
+    """Código do nó "Enviar pelo LoRa" com as mensagens do comandos.txt."""
+    return FUNC_ENVIAR.replace("%COMANDOS%", json.dumps(cmds, ensure_ascii=False))
+
+
+def func_cmd_dashboard(cmds):
+    """Código do nó que aceita os comandos do dashboard Python."""
+    return FUNC_CMD_DASHBOARD.replace("%COMANDOS%", json.dumps(cmds, ensure_ascii=False))
+
 
 FUNC_REPASSE = r"""// Repassa cada linha recebida do LoRa ao dashboard Python (porta TCP).
 let linha = Buffer.isBuffer(msg.payload) ? msg.payload.toString('latin1')
@@ -215,7 +291,7 @@ def podar(nos, remover):
         remover |= novos
 
 
-def gerar(porta):
+def gerar(porta, cmds):
     nos = json.loads(ORIGINAL.read_text())
     por_id = {n["id"]: n for n in nos}
 
@@ -376,7 +452,7 @@ setInterval(function () {
 
         # ---- envio dos comandos
         {"id": ENVIAR, "type": "function", "z": TAB_FLUXO, "name": "Enviar pelo LoRa",
-         "func": FUNC_ENVIAR, "outputs": 2, "noerr": 0, "x": 2420, "y": y0,
+         "func": func_enviar(cmds), "outputs": 2, "noerr": 0, "x": 2420, "y": y0,
          "wires": [["cubesat.serial.out"], ["cubesat.txt.ultimo"]]},
         {"id": "cubesat.serial.out", "type": "serial out", "z": TAB_FLUXO,
          "name": "LoRa (enviar)", "serial": SERIAL_CFG, "x": 2660, "y": y0 - 20,
@@ -394,10 +470,21 @@ setInterval(function () {
         {"id": "cubesat.repasse", "type": "function", "z": TAB_FLUXO,
          "name": "linha -> dashboard Python", "func": FUNC_REPASSE, "outputs": 1,
          "noerr": 0, "x": 2420, "y": y0 + 100, "wires": [["cubesat.tcp"]]},
+        # a porta 5555 é aberta pelo "tcp in" (comandos do dashboard); o "tcp
+        # out" em modo reply escreve em todas as conexões dele (sem _session)
         {"id": "cubesat.tcp", "type": "tcp out", "z": TAB_FLUXO,
-         "name": f"dashboard Python (porta {PORTA_TCP})", "host": "", "port": PORTA_TCP,
-         "beserver": "server", "base64": False, "end": False, "tls": "",
+         "name": f"dashboard Python (porta {PORTA_TCP})", "host": "", "port": "",
+         "beserver": "reply", "base64": False, "end": False, "tls": "",
          "x": 2680, "y": y0 + 100, "wires": []},
+        {"id": "cubesat.tcp.in", "type": "tcp in", "z": TAB_FLUXO,
+         "name": f"comandos do dashboard Python (porta {PORTA_TCP})", "server": "server",
+         "host": "", "port": PORTA_TCP, "datamode": "stream", "datatype": "utf8",
+         "newline": "\\n", "topic": "", "trim": False, "base64": False, "tls": "",
+         "x": 2180, "y": y0 + 40, "wires": [["cubesat.cmd.dashboard"]]},
+        {"id": "cubesat.cmd.dashboard", "type": "function", "z": TAB_FLUXO,
+         "name": "comando do dashboard (só 2004, só local)", "func": func_cmd_dashboard(cmds),
+         "outputs": 2, "noerr": 0, "x": 2440, "y": y0 + 40,
+         "wires": [["cubesat.serial.out"], ["cubesat.txt.ultimo"]]},
         {"id": DECODIFICAR, "type": "function", "z": TAB_FLUXO,
          "name": "linha CAN -> decodedData (CUBESATProtocolParser)",
          "func": FUNC_DECODIFICAR.replace("%PARSER%", extrair_parser()),
@@ -426,9 +513,9 @@ setInterval(function () {
          "className": "", "style": False, "x": 2640, "y": y0 + 300, "wires": []},
         {"id": "cubesat.comentario", "type": "comment", "z": TAB_FLUXO,
          "name": f"LoRa pela serial FTDI ({porta}, {BAUD}) — gerado por gerar_fluxo_rasp.py",
-         "info": "Comandos dos botões saem pela serial; linhas recebidas são "
-                 "decodificadas para o painel e repassadas ao dashboard Python "
-                 f"pela porta TCP {PORTA_TCP}.",
+         "info": "Comandos dos botões e do dashboard Python saem pela serial; "
+                 "linhas recebidas são decodificadas para o painel e repassadas "
+                 f"ao dashboard Python pela porta TCP {PORTA_TCP}.",
          "x": 2300, "y": y0 - 80, "wires": []},
     ]
     return nos + novos, removidos
@@ -441,9 +528,13 @@ def main():
     ap.add_argument("--saida", default=str(AQUI / "fluxoCubesat-rasp.json"))
     ap.add_argument("-v", action="store_true", help="lista os nós removidos")
     a = ap.parse_args()
-    nos, removidos = gerar(a.porta)
+    cmds = load_commands(COMANDOS_TXT)
+    nos, removidos = gerar(a.porta, cmds)
     Path(a.saida).write_text(json.dumps(nos, ensure_ascii=False, indent=1))
     print(f"gerado: {a.saida} (serial {a.porta} @ {BAUD}; {len(removidos)} nós removidos)")
+    print(f"mensagens dos botões ({COMANDOS_TXT.name}):")
+    for nome in NOMES:
+        print(f"  {nome:17} {cmds[nome] or '(vazio: botão não envia)'}")
     if a.v:
         orig = {n["id"]: n for n in json.loads(ORIGINAL.read_text())}
         for i in sorted(removidos):

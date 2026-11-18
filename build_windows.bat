@@ -1,5 +1,6 @@
 @echo off
-rem Gera CubeSatDashboard.exe e copia para a Area de Trabalho.
+rem Gera CubeSatDashboard.exe e copia para a Area de Trabalho, junto com o
+rem comandos.txt (mensagens dos botoes; pode ser editado depois).
 rem Rode no Windows com duplo clique (precisa de Python 3 instalado).
 setlocal
 cd /d "%~dp0"
@@ -20,9 +21,12 @@ if errorlevel 1 goto erro
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESK=%%D"
 copy /y "dist\CubeSatDashboard.exe" "%DESK%\" >nul
 if errorlevel 1 goto erro
+rem nao sobrescreve um comandos.txt ja editado na Area de Trabalho
+if not exist "%DESK%\comandos.txt" copy "comandos.txt" "%DESK%\" >nul
 
 echo.
 echo Pronto: "%DESK%\CubeSatDashboard.exe"
+echo Mensagens dos botoes: "%DESK%\comandos.txt"
 pause
 exit /b 0
 

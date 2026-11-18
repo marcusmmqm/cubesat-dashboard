@@ -31,6 +31,7 @@ No boot, o dashboard fica na frente.
 | `abrir_nodered.sh` | espera o Node-RED responder e abre o painel no Chromium como aplicativo |
 | `abrir_dashboard.sh` | abre o dashboard Python recebendo os dados do Node-RED (`--tcp localhost:5555`) |
 | `vigia_tela.py` | vigia da "tela preta" (ver abaixo) |
+| `enviar_para_rasp.sh` | roda no PC: sobe quiosque, dashboard e fluxo do Node-RED para o Raspberry |
 | `instalar.sh` / `desinstalar.sh` | instala o quiosque no lugar do EcoDisplay / desfaz e volta o EcoDisplay |
 
 Logs de cada programa: `~/.cache/cubesat-kiosk/*.log` no Raspberry; do compositor:
@@ -38,17 +39,18 @@ Logs de cada programa: `~/.cache/cubesat-kiosk/*.log` no Raspberry; do composito
 
 ## Instalar / atualizar
 
-No PC, a partir da raiz deste repositório:
+No PC (Linux, com ssh sem senha para o `pi`):
 
 ```bash
-# quiosque
-rsync -a --exclude __pycache__ raspberry/ pi@10.33.133.150:cubesat-kiosk/
-# dashboard Python (só os arquivos do dashboard)
-rsync -a --exclude .git --exclude .superpowers --exclude __pycache__ \
-      --exclude raspberry --exclude node-red --exclude docs ./ pi@10.33.133.150:dashboardPython/
+raspberry/enviar_para_rasp.sh            # ou: raspberry/enviar_para_rasp.sh pi@OUTRO_IP
 ```
 
-No Raspberry (uma vez):
+O script roda os testes, gera o fluxo do Node-RED (se o fluxo base estiver em
+`node-red/`), copia o quiosque para `~/cubesat-kiosk` e o dashboard para
+`~/dashboardPython`, carrega o fluxo no Node-RED (guardando o anterior em
+`~/fluxo-backup/` no Raspberry) e reabre o dashboard.
+
+No Raspberry (só na primeira instalação):
 
 ```bash
 sudo ~/cubesat-kiosk/instalar.sh
@@ -67,9 +69,10 @@ Para voltar ao EcoDisplay: `sudo ~/cubesat-kiosk/desinstalar.sh`.
 ```
 receptor LoRa (FTDI, /dev/ttyUSB0, 115200)
         │  ▲
- linhas │  │ comandos dos botões (JSON + \n)
+ linhas │  │ comandos dos botões (mensagens do comandos.txt + \r\n)
         ▼  │
-     Node-RED ──── porta TCP 5555 ───▶ dashboard Python (--tcp localhost:5555)
+     Node-RED ◀─── porta TCP 5555 ───▶ dashboard Python (--tcp localhost:5555)
+                linhas ▶ · ◀ botões do dashboard (só de 127.0.0.1)
         │
         └── painel CubeSat no Chromium (http://localhost:1880/ui/)
 ```

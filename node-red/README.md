@@ -44,27 +44,34 @@ O `codec1.txt` (aba "Agro") é de outro projeto e não é carregado.
 
 ## Comandos enviados (para o firmware)
 
-Cada toque envia **uma linha de texto terminada em `\n`** com o mesmo JSON que o
-fluxo mandava antes ao ChirpStack. O campo `data` é Base64 dos bytes do comando.
+As mensagens vêm do **`../comandos.txt`**, o mesmo arquivo do dashboard Python:
+o gerador as copia para dentro do fluxo. **Depois de mudar o `comandos.txt`,
+rode `raspberry/enviar_para_rasp.sh`** (gera o fluxo de novo e carrega no
+Node-RED). Cada mensagem sai numa linha terminada em `\r\n`; `{SETPOINT}` vira
+o setpoint em hex, 4 dígitos (300 → `012C`).
 
-```
-{"devEui": "0005168000136ee4","confirmed": true,"fPort": 1,"data": "AAE="}\n
-```
+**Botões do painel** (MauáSat): o botão só escolhe o comando; ele é enviado
+depois de **Update** + PIN correto (PIN errado não envia nada). Por dentro, os
+botões ainda montam o JSON do ChirpStack, e o nó "Enviar pelo LoRa" troca pela
+mensagem do `comandos.txt`:
 
-**MauáSat** (`devEui` `0005168000136ee4`) — o botão só escolhe o comando; ele é
-enviado depois de **Update** + PIN correto (PIN errado não envia nada):
-
-| Botão | `data` | Bytes |
+| Botão | Bytes no JSON | Mensagem |
 |---|---|---|
-| ACIONA DEPLOYER | `AAE=` | `00 01` |
-| DESLIGA DEPLOYER | `AAI=` | `00 02` |
-| DESLIGA ATITUDE | `AAQ=` | `00 04` |
-| LIGA ATITUDE | ex. `AAUBLA==` | `00 05` + azimute (uint16 big-endian; 300 → `01 2C`) |
+| LIGA ATITUDE | `00 05` + setpoint | `LIGA_ATITUDE` (hoje `{00002004:80SSSS0000000000}`) |
+| DESLIGA ATITUDE | `00 04` | `DESLIGA_ATITUDE` (hoje `{00002004:00SSSS0000000000}`) |
+| ACIONA DEPLOYER | `00 01` | `ACIONA_DEPLOYER` (hoje vazia: não envia) |
+| DESLIGA DEPLOYER | `00 02` | `DESLIGA_DEPLOYER` (hoje vazia: não envia) |
 
-O azimute vem do campo **Send Setpoint_atitude (int 0 a 359°)** (digitar e apertar Enter no teclado da
-tela). Sem azimute definido, LIGA ATITUDE sai só com `00 05`.
+O setpoint vem do campo **Send Setpoint_atitude** (digitar e apertar Enter).
+Sem setpoint válido, LIGA ATITUDE **não é enviado**; DESLIGA usa o último
+setpoint digitado, ou 16 se não houver. Mensagem vazia ou comando desconhecido:
+nada é enviado e "Último comando" mostra "NÃO enviado" com o motivo.
 
-(`confirmed` e `fPort` vêm do formato do ChirpStack e são sempre `true` e `1`.)
+**Dashboard Python**: manda as mesmas linhas pela porta TCP 5555 (a conexão
+pela qual ele recebe a telemetria). O Node-RED só aceita conexões do próprio
+Raspberry (`127.0.0.1`) e só linhas iguais a uma das mensagens do
+`comandos.txt` (setpoint de 0 a 359); o resto é ignorado (aviso no log do
+Node-RED). Estes não pedem PIN.
 
 ## Tela (800x480, rola para baixo, sem rolagem lateral)
 

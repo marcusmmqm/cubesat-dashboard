@@ -23,6 +23,26 @@ real, dois painéis lado a lado:
 
 Cada painel tem um botão **Limpar**.
 
+No topo ficam o campo **Setpoint (°)** e os botões **Liga atitude** e
+**Desliga atitude**, que enviam o comando `2004` ao CubeSat pela mesma serial
+do receptor LoRa (FTDI). O campo só guarda o valor (inteiro de 0 a 359; começa
+em 16): ele é enviado junto quando se clica em um dos botões.
+
+| Bytes | Conteúdo |
+|---|---|
+| 0 | status: `80` liga, `00` desliga |
+| 1–2 | Setpoint_atitude, uint16 big-endian |
+| 3–7 | `00` |
+
+| Botão | Linha enviada (setpoint 300° = `012C`) |
+|---|---|
+| Liga atitude | `{00002004:80012C0000000000}\r\n` |
+| Desliga atitude | `{00002004:00012C0000000000}\r\n` |
+
+Ao lado aparece "enviado às HH:MM:SS" ou "NÃO enviado" (serial desconectada ou
+setpoint fora de 0–359). O comando é montado em `commands.py`. Com `--tcp`
+(Raspberry) os botões não aparecem: lá os comandos saem pelo Node-RED.
+
 ## Raspberry e Node-RED
 
 Na estação de solo com Raspberry Pi (tela de 800x480), o dashboard roda num
@@ -133,3 +153,9 @@ python3 -m unittest
 - **Ordem dos bytes**: `1F864` é lido como int16 big-endian com sinal. Com o firmware antigo o `1F864` chegava em little-endian (roda parada:
   `7A00` → +122); se aparecerem valores como 31232 com a roda parada, a ordem
   voltou a ser little-endian.
+- **Comando de atitude ainda sem resposta do CubeSat.** No teste de 18/11/2026
+  as linhas `2004` (liga 16°, liga 90°, desliga) saíram pela serial do FTDI,
+  mas o Setpoint_atitude devolvido no `408A2` continuou 300 e a roda parada, e
+  o módulo LoRa não respondeu nada na serial. Falta confirmar se o firmware do
+  LoRa da estação transmite o que chega pela serial e se o firmware do CubeSat
+  já trata o ID `2004`.

@@ -13,6 +13,7 @@ from serial.tools import list_ports
 
 from attitude import CAN_POSITION, CAN_TARGET, Attitude, hand_end
 from can_parser import decode, parse_line, to_int16
+from commands import SETPOINT_INICIAL, attitude_command, parse_setpoint
 
 # ----------------------------------------------------------------- layout
 # Gráficos de linha (o painel da direita é o relógio de atitude, ClockPanel).
@@ -65,39 +66,65 @@ def choose_port(ports):
 
 # ----------------------------------------------------------------- serial
 class SerialReader(threading.Thread):
-    """Lê a serial numa thread e põe (t, can_id, data) na fila."""
+    """Lê a serial numa thread e põe (t, can_id, data) na fila. send() escreve
+    na mesma porta aberta (só um programa pode abrir a COM)."""
 
     def __init__(self, port, baud, out):
         super().__init__(daemon=True)
         self.port, self.baud, self.out = port, baud, out
         self.status = ("conectando…", WARN)
-        self._stop = threading.Event()
+        self._stop_ev = threading.Event()
+        self._serial = None
+        self._lock = threading.Lock()
+
+    @property
+    def connected(self):
+        return self._serial is not None
+
+    def send(self, data):
+        """Escreve data (bytes) na serial. False se não houver porta aberta."""
+        with self._lock:
+            s = self._serial
+            if s is None:
+                return False
+            try:
+                s.write(data)
+                s.flush()
+                return True
+            except (serial.SerialException, OSError):
+                return False
 
     def run(self):
-        while not self._stop.is_set():
+        while not self._stop_ev.is_set():
             # sem --port: procura o receptor a cada tentativa (no Windows o
             # número da COM pode mudar ao trocar de porta USB)
             port = self.port or choose_port(list_ports.comports())
             if port is None:
                 self.status = ("receptor não encontrado — conecte o USB", WARN)
-                self._stop.wait(2.0)
+                self._stop_ev.wait(2.0)
                 continue
             try:
-                with serial.Serial(port, self.baud, timeout=0.5) as s:
+                # serial_for_url aceita COM5, /dev/ttyUSB0 e também loop:// (testes)
+                with serial.serial_for_url(port, self.baud, timeout=0.5) as s:
                     self.status = (f"{port} @ {self.baud}", OK)
-                    while not self._stop.is_set():
-                        line = s.readline()
-                        if not line:
-                            continue
-                        msg = parse_line(line)
-                        if msg:
-                            self.out.put((time.time(),) + msg)
+                    self._serial = s
+                    try:
+                        while not self._stop_ev.is_set():
+                            line = s.readline()
+                            if not line:
+                                continue
+                            msg = parse_line(line)
+                            if msg:
+                                self.out.put((time.time(),) + msg)
+                    finally:
+                        with self._lock:
+                            self._serial = None
             except (serial.SerialException, OSError) as e:
                 self.status = (f"erro na serial: {e} — tentando de novo", ERR)
-                self._stop.wait(2.0)
+                self._stop_ev.wait(2.0)
 
     def stop(self):
-        self._stop.set()
+        self._stop_ev.set()
 
 
 class TcpReader(threading.Thread):
@@ -109,16 +136,16 @@ class TcpReader(threading.Thread):
         super().__init__(daemon=True)
         self.host, self.port, self.out = host, port, out
         self.status = ("conectando ao Node-RED…", WARN)
-        self._stop = threading.Event()
+        self._stop_ev = threading.Event()
 
     def run(self):
-        while not self._stop.is_set():
+        while not self._stop_ev.is_set():
             try:
                 with socket.create_connection((self.host, self.port), timeout=2) as s:
                     s.settimeout(0.5)
                     self.status = (f"via Node-RED ({self.host}:{self.port})", OK)
                     buf = b""
-                    while not self._stop.is_set():
+                    while not self._stop_ev.is_set():
                         try:
                             chunk = s.recv(4096)
                         except socket.timeout:
@@ -133,10 +160,10 @@ class TcpReader(threading.Thread):
                                 self.out.put((time.time(),) + msg)
             except OSError as e:
                 self.status = (f"sem conexão com o Node-RED ({e}) — tentando de novo", ERR)
-                self._stop.wait(2.0)
+                self._stop_ev.wait(2.0)
 
     def stop(self):
-        self._stop.set()
+        self._stop_ev.set()
 
 
 def parse_hostport(text):
@@ -415,6 +442,33 @@ class App:
         self.status = tk.Label(top, text="", bg=BG, fg=MUTED, font=(FONT, 10))
         self.status.pack(side="right")
 
+        # comandos ao CubeSat: só com a serial aberta pelo próprio dashboard
+        # (com --tcp, no Raspberry, quem envia é o Node-RED: sem botões)
+        if hasattr(self.reader, "send"):
+            cmd = tk.Frame(top, bg=BG)
+            cmd.pack(side="left", padx=(24, 0))
+            # o campo só guarda o setpoint: ele sai junto com Liga ou Desliga
+            tk.Label(cmd, text="Setpoint (°)", bg=BG, fg=MUTED,
+                     font=(FONT, 10)).pack(side="left", padx=(0, 4))
+            self.setpoint_var = tk.StringVar(value=str(SETPOINT_INICIAL))
+            entry = tk.Entry(cmd, textvariable=self.setpoint_var, width=5,
+                             justify="center", bg=TILE, fg=TEXT, insertbackground=TEXT,
+                             relief="flat", highlightthickness=1,
+                             highlightbackground=BORDER, highlightcolor=ACCENT,
+                             font=(MONO, 11))
+            entry.pack(side="left", padx=(0, 6), ipady=2)
+            for texto, on, cor in (("Liga atitude", True, OK),
+                                   ("Desliga atitude", False, ERR)):
+                tk.Button(cmd, text=texto, bg=TILE, fg=cor,
+                          activebackground=BORDER, activeforeground=cor,
+                          relief="flat", highlightthickness=1,
+                          highlightbackground=cor, padx=12, pady=2,
+                          font=(FONT, 10, "bold"), cursor="hand2",
+                          command=lambda t=texto, o=on: self.send_command(t, o),
+                          ).pack(side="left", padx=(0, 6))
+            self.cmd_status = tk.Label(cmd, text="", bg=BG, fg=MUTED, font=(FONT, 9))
+            self.cmd_status.pack(side="left", padx=(6, 0))
+
         body = tk.Frame(root, bg=BG)
         body.pack(fill="both", expand=True, padx=12, pady=(4, 12))
         body.rowconfigure(0, weight=1)
@@ -459,6 +513,23 @@ class App:
         self._status_shown = None
         self.reader.start()
         self.tick()
+
+    def send_command(self, nome, on):
+        """Monta o comando 2004 com o setpoint do campo, envia pela serial do
+        LoRa e mostra se foi ou não."""
+        try:
+            setpoint = parse_setpoint(self.setpoint_var.get())
+        except ValueError:
+            self.cmd_status.config(text=f"{nome}: NÃO enviado (setpoint deve ser "
+                                        "inteiro de 0 a 359)", fg=ERR)
+            return
+        hora = time.strftime("%H:%M:%S")
+        if self.reader.send(attitude_command(on, setpoint)):
+            self.cmd_status.config(text=f"{nome} ({setpoint}°): enviado às {hora}",
+                                   fg=OK)
+        else:
+            self.cmd_status.config(text=f"{nome}: NÃO enviado (serial desconectada)",
+                                   fg=ERR)
 
     def poll(self):
         try:

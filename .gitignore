@@ -11,3 +11,6 @@ node-red/codec1.txt
 
 # rascunho de execução dos planos (superpowers)
 .superpowers/
+
+# executáveis: gerados pelo build_windows.bat, não vão para o repositório
+*.exe
